@@ -1,5 +1,7 @@
 *.swp
 *.swo
+*.db
+*.pkl
 .vscode/
 .ipynb_checkpoints/
 __pycache__/
