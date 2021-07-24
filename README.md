@@ -11,4 +11,4 @@
 Matteo Barbetti | Ph.D. student in Smart Computing | University of Firenze, INFN-Firenze
 
 ## About
-Jupyter notebooks to classify lymphoma in Hodgkin (HL), Gray-zone (GZ) and Progressive multifocal leukoencephalopathy (PML).
+Bulky mediastinal lymphoma classification with ML-techniques.
