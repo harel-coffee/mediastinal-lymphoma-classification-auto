@@ -1,11 +1,11 @@
 [![Made withJupyter](https://img.shields.io/badge/Made%20with-Jupyter-orange?style=for-the-badge&logo=Jupyter)](https://jupyter.org/try)
 
-[![GitHub license](https://img.shields.io/github/license/mbarbetti/LNHunter)](https://github.com/mbarbetti/LNHunter)
-[![GitHub issues](https://img.shields.io/github/issues/mbarbetti/LNHunter.svg)](https://github.com/mbarbetti/LNHunter/issues/)
-[![GitHub pull-requests](https://img.shields.io/github/issues-pr/mbarbetti/LNHunter.svg)](https://github.com/mbarbetti/LNHunter/pulls/)
-[![wakatime](https://wakatime.com/badge/github/mbarbetti/LNHunter.svg)](https://wakatime.com/badge/github/mbarbetti/LNHunter)
-[![GitHub watchers](https://img.shields.io/github/watchers/mbarbetti/LNHunter?style=social)](https://github.com/mbarbetti/LNHunter/watchers/)
-[![GitHub stars](https://img.shields.io/github/stars/mbarbetti/LNHunter?style=social)](https://github.com/mbarbetti/LNHunter/)
+[![GitHub license](https://img.shields.io/github/license/mbarbetti/lymphoma-classification)](https://github.com/mbarbetti/lymphoma-classification)
+[![GitHub issues](https://img.shields.io/github/issues/mbarbetti/lymphoma-classification.svg)](https://github.com/mbarbetti/lymphoma-classification/issues/)
+[![GitHub pull-requests](https://img.shields.io/github/issues-pr/mbarbetti/lymphoma-classification.svg)](https://github.com/mbarbetti/lymphoma-classification/pulls/)
+[![wakatime](https://wakatime.com/badge/github/mbarbetti/lymphoma-classification.svg)](https://wakatime.com/badge/github/mbarbetti/lymphoma-classification)
+[![GitHub watchers](https://img.shields.io/github/watchers/mbarbetti/lymphoma-classification?style=social)](https://github.com/mbarbetti/lymphoma-classification/watchers/)
+[![GitHub stars](https://img.shields.io/github/stars/mbarbetti/lymphoma-classification?style=social)](https://github.com/mbarbetti/lymphoma-classification/)
 
 # Lymphoma Non-Hodgkin hunter
 Matteo Barbetti | Ph.D. student in Smart Computing | University of Firenze, INFN-Firenze
