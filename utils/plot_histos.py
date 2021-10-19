@@ -11,20 +11,6 @@ def plot_histos (
                   figsize : tuple = (10,6) , 
                   legend_on_left : list = [] ,
                 ):
-  """
-  Plot histograms
-  ===============
-
-  ...
-
-  Parameters
-  ----------
-    ...
-
-  Returns
-  -------
-    ...
-  """
   if len(vars) != ( n_rows * n_cols ):
     raise ValueError (
       "Histograms for the labels passed cannot be arrange as a grid of rows = %d and cols = %d." % (n_rows, n_cols)
@@ -35,7 +21,6 @@ def plot_histos (
 
   labels = ["HL", "GZ", "PML"]
   colors = ["dodgerblue", "deeppink", "forestgreen"]
-
 
   ### Histos in 2-D array
   if (n_rows != 1) and (n_cols != 1):
@@ -71,9 +56,7 @@ def plot_histos (
             ax[i,j] . legend ( loc = "upper right", fontsize = 8 )
 
         n += 1
-
     plt.show()
-
 
   ### Histos in 1-D array
   else:
@@ -105,5 +88,4 @@ def plot_histos (
           ax[n] . legend ( loc = "upper left" , fontsize = 8 )
         else:
           ax[n] . legend ( loc = "upper right", fontsize = 8 )
-
     plt.show()

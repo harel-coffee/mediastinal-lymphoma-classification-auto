@@ -4,27 +4,12 @@ import pandas as pd
 from datetime import datetime
 
 
-
 def data_cleaning (
                     db : pd.DataFrame ,
                     col_name    : str , 
                     target_type : str , 
                     inplace : bool = False ,
                   )   -> pd.DataFrame :
-  """
-  Data cleaning
-  =============
-
-  ...
-
-  Parameters
-  ----------
-    ...
-
-  Returns
-  -------
-    ...
-  """
   if not isinstance ( col_name, str ):
     raise TypeError ( "The column name should be a string, %s passed" % type(col_name) )
   values = list ( db[col_name] )
@@ -52,6 +37,7 @@ def data_cleaning (
     new_db = db.copy()
     new_db[col_name] = values
     return new_db
+
 
 
 if __name__ == "__main__":

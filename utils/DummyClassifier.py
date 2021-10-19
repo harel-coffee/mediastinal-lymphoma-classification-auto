@@ -4,17 +4,11 @@ import pandas as pd
 from sklearn.base import BaseEstimator
 
 
-
 class DummyClassifier ( BaseEstimator ):
-  """
-  Dummy Classifier
-  ================
-  """
   def __init__ ( self ):
     super().__init__()
     self._labels = None
     self._lbl_ratios = None
-
 
   def fit ( self, X, y ):
     if not isinstance ( X, (tuple, list, np.ndarray, pd.Series, pd.DataFrame) ):
@@ -35,7 +29,6 @@ class DummyClassifier ( BaseEstimator ):
 
     self._labels = np.unique ( y )
     self._lbl_ratios = [ len ( np.nonzero ( y == lbl ) [0] ) / len ( y ) for lbl in self._labels ]
-
 
   def predict ( self, X ):
     edges = np.cumsum ( self._lbl_ratios )
