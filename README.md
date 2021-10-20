@@ -6,8 +6,8 @@
 [![GitHub watchers](https://img.shields.io/github/watchers/mbarbetti/lymphoma-classification?style=social)](https://github.com/mbarbetti/lymphoma-classification/watchers/)
 [![GitHub stars](https://img.shields.io/github/stars/mbarbetti/lymphoma-classification?style=social)](https://github.com/mbarbetti/lymphoma-classification/)
 
-# Lymphoma Non-Hodgkin hunter
-Matteo Barbetti | Ph.D. student in Smart Computing | University of Firenze, INFN-Firenze
+# Lymphoma classification
+[👓 Matteo Barbetti](https://mbarbetti.github.io/) | Ph.D. student in Smart Computing | University of Florence, INFN-Firenze
 
 ## About
 Bulky mediastinal lymphoma classification with ML-techniques.
