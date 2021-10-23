@@ -3,7 +3,7 @@ import numpy as np
 
 def display_score ( scores: list , 
                     score_name : str = "accuracy" , 
-                    model_name : str = "Some classifier" ):
+                    model_name : str = "Some classifier" ) -> None:
   str_len = len ( model_name )
   print ( "+--" + "-" * str_len + "--+")
   print ( "|  {}  |" . format (model_name) )

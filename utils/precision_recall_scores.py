@@ -6,13 +6,11 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 
 
-def precision_recall_scores ( 
-                              y_true  : np.ndarray , 
+def precision_recall_scores ( y_true  : np.ndarray , 
                               y_pred  : np.ndarray ,
-                              verbose : bool = False ,
                               labels  : list = None , 
                               show_conf_matrix : bool = False ,
-                            ):
+                              verbose : bool = False ) -> tuple:
   if labels is not None:
     if len(labels) != len(np.unique(y_true)):
       raise ValueError ( "Labels list length doesn't match with the true number of classes." )

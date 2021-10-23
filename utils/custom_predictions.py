@@ -8,7 +8,7 @@ def custom_predictions ( y_true : np.ndarray ,
                          y_scores : np.ndarray ,
                          recall_score : float = None ,
                          precision_score : float = None ,
-                         show_curves : bool = False ):
+                         show_curves : bool = False ) -> tuple:
   if len(y_scores.shape) == 2:
     y_scores = y_scores[:,1]
 

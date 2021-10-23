@@ -2,15 +2,13 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 
-def plot_histos (
-                  df : pd.DataFrame ,
+def plot_histos ( df : pd.DataFrame ,
                   vars : list ,
                   n_rows : int ,
                   n_cols : int ,
                   plot_style : str = "overlapped" , 
                   figsize : tuple = (10,6) , 
-                  legend_on_left : list = [] ,
-                ):
+                  legend_on_left : list = [] ) -> None:
   if len(vars) != ( n_rows * n_cols ):
     raise ValueError (
       "Histograms for the labels passed cannot be arrange as a grid of rows = %d and cols = %d." % (n_rows, n_cols)
