@@ -6,9 +6,9 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 
 
-def precision_recall_scores ( y_true  : np.ndarray , 
-                              y_pred  : np.ndarray ,
-                              labels  : list = None , 
+def precision_recall_scores ( y_true : np.ndarray , 
+                              y_pred : np.ndarray ,
+                              labels : list = None , 
                               show_conf_matrix : bool = False ,
                               verbose : bool = False ) -> tuple:
   if labels is not None:

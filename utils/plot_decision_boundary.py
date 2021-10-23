@@ -83,7 +83,7 @@ def plot_decision_boundary ( model : BaseEstimator ,
   ## Plot limits
   x_min = np.min ( [np.min(tp_scores[:,1]), np.min(tn_scores[:,1])] ) - 0.05
   x_max = np.max ( [np.max(tp_scores[:,1]), np.max(tn_scores[:,1])] ) + 0.05
-  y_min = np.min ( X_true[:,high_rank_idx] ) - 0.5
+  y_min = np.min ( X_true[:,high_rank_idx] ) - 0.5  
   y_max = np.max ( X_true[:,high_rank_idx] ) + 0.5
 
   ## Text positions
@@ -112,7 +112,7 @@ def plot_decision_boundary ( model : BaseEstimator ,
 
     ## PPV or TPR > 0.8
     plt.axvspan (x_min, thr80, color = "salmon", alpha = 0.15, zorder = 1)
-    plt.plot ([thr80,thr80], [y_min,y_max], color = "black", linestyle = "--", zorder =2)
+    plt.plot ([thr80,thr80], [y_min,y_max], color = "black", linestyle = "--", zorder = 2)
     plt.axvspan (thr80, x_max, color = "cornflowerblue", alpha = 0.15, zorder = 1)
     plt.text (x_txt80, y_txt, textstr80, fontsize = 8, weight = "bold", ha = "center", va = 'center', bbox = props80)
 
