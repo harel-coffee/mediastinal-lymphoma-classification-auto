@@ -14,13 +14,13 @@
 Bulky mediastinal lymphoma classification with Machine Learning techniques.
 
 ## Contents
-- `data_preparation` [[Jupyter Notebook](https://github.com/mbarbetti/lymphoma-classification/blob/master/1_data_preparation.ipynb)]
+- **Data preparation** [[Jupyter Notebook](https://github.com/mbarbetti/lymphoma-classification/blob/master/1_data_preparation.ipynb)]
   - data format correction
-- `data_visualization` [[Jupyter Notebook](https://github.com/mbarbetti/lymphoma-classification/blob/master/2_data_visualization.ipynb)]
+- **Data Visualization** [[Jupyter Notebook](https://github.com/mbarbetti/lymphoma-classification/blob/master/2_data_visualization.ipynb)]
   - correlated features removal
-- `binary_classification` [[Jupyter Notebook](https://github.com/mbarbetti/lymphoma-classification/blob/master/3_binary_classification.ipynb)]
-  - binary classification in HL and non-HL
-- `multiclass_classification` [[Jupyter Notebook](https://github.com/mbarbetti/lymphoma-classification/blob/master/4_multiclass_classification.ipynb)]
-  - multiclass classification in HL, GZ and PML
-- `lymphoma_classification` [[Jupyter Notebook](https://github.com/mbarbetti/lymphoma-classification/blob/master/5_lymphoma_classification.ipynb)]
+- **Binary Classification** [[Jupyter Notebook](https://github.com/mbarbetti/lymphoma-classification/blob/master/3_binary_classification.ipynb)]
+  - classification in HL and non-HL
+- **Multiclass Classification** [[Jupyter Notebook](https://github.com/mbarbetti/lymphoma-classification/blob/master/4_multiclass_classification.ipynb)]
+  - classification in HL, GZ and PML
+- **Lymphoma Classification** [[Jupyter Notebook](https://github.com/mbarbetti/lymphoma-classification/blob/master/5_lymphoma_classification.ipynb)]
   - binary classification in HL and PML promoted to multiclass classification
