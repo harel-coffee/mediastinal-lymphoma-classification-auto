@@ -11,4 +11,16 @@
 [👓 Matteo Barbetti](https://mbarbetti.github.io/) | Ph.D. student in Smart Computing | University of Florence, INFN-Firenze
 
 ## About
-Bulky mediastinal lymphoma classification with ML-techniques.
+Bulky mediastinal lymphoma classification with Machine Learning techniques.
+
+## Contents
+- `data_preparation` [[Jupyter Notebook](https://github.com/mbarbetti/lymphoma-classification/blob/master/1_data_preparation.ipynb)]
+  - data format correction
+- `data_visualization` [[Jupyter Notebook](https://github.com/mbarbetti/lymphoma-classification/blob/master/2_data_visualization.ipynb)]
+  - correlated features removal
+- `binary_classification` [[Jupyter Notebook](https://github.com/mbarbetti/lymphoma-classification/blob/master/3_binary_classification.ipynb)]
+  - binary classification in HL and non-HL
+- `multiclass_classification` [[Jupyter Notebook](https://github.com/mbarbetti/lymphoma-classification/blob/master/4_multiclass_classification.ipynb)]
+  - multiclass classification in HL, GZ and PML
+- `lymphoma_classification` [[Jupyter Notebook](https://github.com/mbarbetti/lymphoma-classification/blob/master/5_lymphoma_classification.ipynb)]
+  - binary classification in HL and PML promoted to multiclass classification
