@@ -19,8 +19,8 @@ Bulky mediastinal lymphoma classification with Machine Learning techniques.
 - **Data visualization** [[Jupyter Notebook](https://github.com/mbarbetti/lymphoma-classification/blob/master/2_data_visualization.ipynb)]
   - heavy reduction of input features to remove correlations
 - **Binary classification** [[Jupyter Notebook](https://github.com/mbarbetti/lymphoma-classification/blob/master/3_binary_classification.ipynb)]
-  - HL and non-HL classification using several ML-techniques based on linear methods, Random Forests and BDTs
+  - HL and non-HL classification using several ML-techniques
 - **Multiclass classification** [[Jupyter Notebook](https://github.com/mbarbetti/lymphoma-classification/blob/master/4_multiclass_classification.ipynb)]
-  - HL, GZ and PML classification using several ML-techniques based on linear methods, Random Forests and BDTs
+  - HL, GZ and PML classification using several ML-techniques
 - **Lymphoma classification** [[Jupyter Notebook](https://github.com/mbarbetti/lymphoma-classification/blob/master/5_lymphoma_classification.ipynb)]
   - binary classification in HL and PML promoted to multiclass classification through custom thresholds
