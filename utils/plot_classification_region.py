@@ -40,7 +40,7 @@ def plot_classification_region ( y_true : np.ndarray ,
 
   ## Plot classification region
   plt.figure (figsize = (8,6), dpi = 100)
-  plt.xlabel ("Predicted PML probability", fontsize = 12)
+  plt.xlabel ("Predicted MDLCBL probability", fontsize = 12)
   plt.ylabel ("{}" . format (high_rnk_feat_name), fontsize = 12)
 
   ## Classification region

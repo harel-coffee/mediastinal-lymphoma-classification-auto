@@ -14,7 +14,7 @@ def custom_predictions ( y_true : np.ndarray ,
 
   precision, recall, threshold = precision_recall_curve (y_true, y_scores)
   if show_curves:
-    plt.figure (figsize = (8,5))
+    plt.figure (figsize = (8,5), dpi = 100)
     plt.xlabel ("Threshold", fontsize = 12)
     plt.plot (threshold, precision[:-1], color = "coral", linestyle = "--", label = "Precision")
     plt.plot (threshold, recall[:-1], color = "dodgerblue", linestyle = "-", label = "Recall")

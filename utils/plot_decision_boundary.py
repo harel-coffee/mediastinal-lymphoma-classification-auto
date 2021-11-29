@@ -100,7 +100,7 @@ def plot_decision_boundary ( model : BaseEstimator ,
 
   ## Plot classification results
   plt.figure (figsize = (8,6), dpi = 100)
-  plt.xlabel ("Predicted PML probability", fontsize = 12)
+  plt.xlabel ("Predicted MDLCBL probability", fontsize = 12)
   plt.ylabel ("{}" . format (high_rnk_feat), fontsize = 12)
 
   if strategy is not None:

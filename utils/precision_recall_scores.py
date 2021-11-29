@@ -31,7 +31,7 @@ def precision_recall_scores ( y_true : np.ndarray ,
   if verbose: print ( "+-----------------------+" )
 
   if show_conf_matrix:
-    plt.figure ( figsize = (5,5) )    
+    plt.figure ( figsize = (5,5), dpi = 100 )    
     plt.title ( "Confusion matrix", fontsize = 14 )
     df_conf_mtx = pd.DataFrame (conf_matrix, index = labels, columns = labels )
     sns.heatmap ( df_conf_mtx, annot = True, annot_kws = { "size" : 14 }, cmap = "Blues" )
@@ -39,7 +39,7 @@ def precision_recall_scores ( y_true : np.ndarray ,
     plt.ylabel ( "True labels", fontsize = 12)
     plt.show()
 
-    plt.figure ( figsize = (5,5) )
+    plt.figure ( figsize = (5,5), dpi = 100 )
     plt.title ( "Normalized confusion matrix", fontsize = 14 )
     norm_conf_matrix = conf_matrix / np.sum ( conf_matrix, axis = 1 ) [:,None]
     df_norm_conf_mtx = pd.DataFrame (norm_conf_matrix, index = labels, columns = labels )
