@@ -1,14 +1,18 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+from datetime import datetime
 from sklearn.metrics import precision_recall_curve
+
+from .save_figure import save_figure
 
 
 def custom_predictions ( y_true : np.ndarray ,
                          y_scores : np.ndarray ,
                          recall_score : float = None ,
                          precision_score : float = None ,
-                         show_curves : bool = False ) -> tuple:
+                         show_curves : bool = False ,
+                         fig_name : str = None ) -> tuple:
   if len(y_scores.shape) == 2:
     y_scores = y_scores[:,1]
 
@@ -19,6 +23,16 @@ def custom_predictions ( y_true : np.ndarray ,
     plt.plot (threshold, precision[:-1], color = "coral", linestyle = "--", label = "Precision")
     plt.plot (threshold, recall[:-1], color = "dodgerblue", linestyle = "-", label = "Recall")
     plt.legend (loc = "lower left", fontsize = 12)
+
+    ## Save figure
+    if fig_name is None:
+      timestamp = str (datetime.now()) . split (".") [0]
+      timestamp = timestamp . replace (" ","_")
+      fig_name = "custom_predictions_"
+      for time, unit in zip ( timestamp.split(":"), ["h","m","s"] ):
+        fig_name += time + unit   # YYYY-MM-DD_HHhMMmSSs
+    save_figure ( fig_name )
+
     plt.show()
 
   if (recall is not None ) and (precision_score is None):

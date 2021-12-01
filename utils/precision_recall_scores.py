@@ -3,13 +3,17 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+from datetime        import datetime
 from sklearn.metrics import confusion_matrix
+
+from .save_figure import save_figure
 
 
 def precision_recall_scores ( y_true : np.ndarray , 
                               y_pred : np.ndarray ,
                               labels : list = None , 
                               show_conf_matrix : bool = False ,
+                              fig_name : str = None ,
                               verbose : bool = False ) -> tuple:
   if labels is not None:
     if len(labels) != len(np.unique(y_true)):
@@ -31,12 +35,20 @@ def precision_recall_scores ( y_true : np.ndarray ,
   if verbose: print ( "+-----------------------+" )
 
   if show_conf_matrix:
+    if fig_name is None:
+      timestamp = str (datetime.now()) . split (".") [0]
+      timestamp = timestamp . replace (" ","_")
+      fig_name = "precision_recall_scores_"
+      for time, unit in zip ( timestamp.split(":"), ["h","m","s"] ):
+        fig_name += time + unit   # YYYY-MM-DD_HHhMMmSSs
+
     plt.figure ( figsize = (5,5), dpi = 100 )    
     plt.title ( "Confusion matrix", fontsize = 14 )
     df_conf_mtx = pd.DataFrame (conf_matrix, index = labels, columns = labels )
     sns.heatmap ( df_conf_mtx, annot = True, annot_kws = { "size" : 14 }, cmap = "Blues" )
     plt.xlabel ( "Predicted labels", fontsize = 12 )
     plt.ylabel ( "True labels", fontsize = 12)
+    save_figure ( f"{fig_name}_conf_matrix" )
     plt.show()
 
     plt.figure ( figsize = (5,5), dpi = 100 )
@@ -46,6 +58,7 @@ def precision_recall_scores ( y_true : np.ndarray ,
     sns.heatmap ( df_norm_conf_mtx, annot = True, annot_kws = { "size" : 14 }, cmap = "Blues" )
     plt.xlabel ( "Predicted labels", fontsize = 12 )
     plt.ylabel ( "True labels", fontsize = 12)
+    save_figure ( f"{fig_name}_norm_conf_matrix" )
     plt.show()
 
   return precision, recall

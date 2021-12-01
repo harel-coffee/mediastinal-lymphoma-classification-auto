@@ -1,6 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+from datetime import datetime
+
+from .save_figure             import save_figure
 from .precision_recall_scores import precision_recall_scores
 
 
@@ -10,7 +13,8 @@ def plot_classification_region ( y_true : np.ndarray ,
                                  boundary : list = [0.5] ,
                                  labels : list = None ,
                                  high_rnk_feat_name : str = None ,
-                                 show_conf_matrix : bool = False ) -> None:
+                                 show_conf_matrix : bool = False ,
+                                 fig_name : str = None ) -> None:
   ## Shape check
   if len(y_true) != len(y_scores):
     raise ValueError ( "True labels and predicted scores don't match." )
@@ -40,7 +44,7 @@ def plot_classification_region ( y_true : np.ndarray ,
 
   ## Plot classification region
   plt.figure (figsize = (8,6), dpi = 100)
-  plt.xlabel ("Predicted MDLCBL probability", fontsize = 12)
+  plt.xlabel ("Predicted PMBCL probability", fontsize = 12)
   plt.ylabel ("{}" . format (high_rnk_feat_name), fontsize = 12)
 
   ## Classification region
@@ -73,6 +77,16 @@ def plot_classification_region ( y_true : np.ndarray ,
                   color = "blue", marker = "^", label = labels[2], zorder = 3)
   plt.legend (title = "True label", loc = "upper left", fontsize = 10)
   plt.axis ([x_min, x_max, y_min, y_max])
+  
+  ## Save figure
+  if fig_name is None:
+    timestamp = str (datetime.now()) . split (".") [0]
+    timestamp = timestamp . replace (" ","_")
+    fig_name = "plot_classification_region_"
+    for time, unit in zip ( timestamp.split(":"), ["h","m","s"] ):
+      fig_name += time + unit   # YYYY-MM-DD_HHhMMmSSs
+  save_figure ( fig_name )
+
   plt.show()
 
   if show_conf_matrix:
@@ -89,4 +103,6 @@ def plot_classification_region ( y_true : np.ndarray ,
       y_pred[p1_idx] = 1.
       y_pred[p3_idx] = 3.
 
-    _ = precision_recall_scores (y_true, y_pred, labels = labels, show_conf_matrix = show_conf_matrix)
+    _ = precision_recall_scores ( y_true , y_pred , labels = labels , 
+                                  show_conf_matrix = show_conf_matrix , 
+                                  fig_name = f"{fig_name}_conf_matrix" )

@@ -5,3 +5,4 @@ from .precision_recall_scores    import precision_recall_scores
 from .custom_predictions         import custom_predictions
 from .plot_decision_boundary     import plot_decision_boundary
 from .plot_classification_region import plot_classification_region
+from .save_figure                import save_figure

@@ -1,10 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+from datetime                  import datetime
 from sklearn.base              import BaseEstimator
 from sklearn.model_selection   import cross_val_predict
 from sklearn.feature_selection import RFECV
 
+from .save_figure              import save_figure
 from .custom_predictions       import custom_predictions
 from .precision_recall_scores  import precision_recall_scores
 
@@ -14,7 +16,8 @@ def plot_decision_boundary ( model : BaseEstimator ,
                              y_true : np.ndarray ,
                              labels : list = [0,1] ,
                              strategy : str = None ,
-                             feature_names : list = None ) -> None:
+                             feature_names : list = None ,
+                             fig_name : str = None ) -> None:
   ## Shape check
   if X_true.shape[0] != len(y_true):
     raise ValueError ( "`X_true` and `y_true` lengths don't match." )
@@ -100,7 +103,7 @@ def plot_decision_boundary ( model : BaseEstimator ,
 
   ## Plot classification results
   plt.figure (figsize = (8,6), dpi = 100)
-  plt.xlabel ("Predicted MDLCBL probability", fontsize = 12)
+  plt.xlabel ("Predicted PMBCL probability", fontsize = 12)
   plt.ylabel ("{}" . format (high_rnk_feat), fontsize = 12)
 
   if strategy is not None:
@@ -126,4 +129,14 @@ def plot_decision_boundary ( model : BaseEstimator ,
   plt.scatter (tn_scores[:,1], tn_high_rnk_feat, color = "red", marker = "o", label = f"{labels[0]}", zorder = 3)
   plt.legend (title = "True label", loc = "upper left", fontsize = 10)
   plt.axis ([x_min, x_max, y_min, y_max])
+  
+  ## Save figure
+  if fig_name is None:
+    timestamp = str (datetime.now()) . split (".") [0]
+    timestamp = timestamp . replace (" ","_")
+    fig_name = "plot_decision_boundary_"
+    for time, unit in zip ( timestamp.split(":"), ["h","m","s"] ):
+      fig_name += time + unit   # YYYY-MM-DD_HHhMMmSSs
+  save_figure ( fig_name )
+
   plt.show()
