@@ -20,7 +20,7 @@ args = parser.parse_args()
 score_dir = "scores"
 
 sort_keys = [ "log-reg" , "lin-svm" , "gaus-proc" , "rnd-frs" , "grad-bdt" ]
-file_list = [ f"{k}_{args.threshold}.npz" for k in sort_keys ]
+file_list = [ f"bin-clf_{k}_{args.threshold}.npz" for k in sort_keys ]
 
 #   +---------------------------+
 #   |   Model name extraction   |
@@ -64,7 +64,7 @@ ax.legend (loc = "lower left", fontsize = 10)
 #   |   Save the figure   |
 #   +---------------------+
 
-filename = f"docs/img/roc_curves_{args.threshold}.png"
+filename = f"docs/img/bin-clf/roc_curves_{args.threshold}.png"
 
 plt.tight_layout()
 plt.savefig ( filename, format = "png", dpi = RESOLUTION )
