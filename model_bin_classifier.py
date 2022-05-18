@@ -2,9 +2,7 @@ import os
 import pickle
 import numpy as np
 
-from tqdm import tqdm
-from time import time
-from datetime import datetime
+from tqdm     import tqdm
 from argparse import ArgumentParser
 
 import optuna
@@ -33,9 +31,8 @@ MODELS = [ "log-reg", "lin-svm", "gaus-proc", "rnd-frs", "grad-bdt" ]
 
 parser = ArgumentParser ( description = "training script" )
 parser . add_argument ( "-m" , "--model"     , required = True , choices = MODELS )
-parser . add_argument ( "-s" , "--split"     , default  = "60/20/20" )
-parser . add_argument ( "-t" , "--threshold" , default  = "rec80" )
-# parser . add_argument ( "-v" , "--version"   , required = True )
+parser . add_argument ( "-s" , "--split"     , default  = "50/30/20" )
+parser . add_argument ( "-t" , "--threshold" , default  = "rec90" )
 args = parser . parse_args()
 
 if len ( args.split.split("/") ) == 2:
@@ -333,40 +330,40 @@ plot_conf_matrices ( conf_matrix = np.mean(conf_matrices[0], axis = 0) . astype(
                      labels = LABELS      ,
                      show_matrix = "both" , 
                      save_figure = True   ,
-                     fig_name = f"bin_clf/{args.model}/{args.model}_{args.threshold}_train" )
+                     fig_name = f"bin-clf/{args.model}/{args.model}_{args.threshold}_train" )
 
 plot_conf_matrices ( conf_matrix = np.mean(conf_matrices[1], axis = 0) . astype(np.int32) ,
                      labels = LABELS      ,
                      show_matrix = "both" , 
                      save_figure = True   ,
-                     fig_name = f"bin_clf/{args.model}/{args.model}_{args.threshold}_val" )
+                     fig_name = f"bin-clf/{args.model}/{args.model}_{args.threshold}_val" )
 
 plot_conf_matrices ( conf_matrix = np.mean(conf_matrices[2], axis = 0) . astype(np.int32) ,
                      labels = LABELS      ,
                      show_matrix = "both" , 
                      save_figure = True   ,
-                     fig_name = f"bin_clf/{args.model}/{args.model}_{args.threshold}_test" )
+                     fig_name = f"bin-clf/{args.model}/{args.model}_{args.threshold}_test" )
 
 plot_prf_histos ( tpr_scores = np.array(tprs[0]) ,
                   tnr_scores = np.array(tnrs[0]) ,
                   bins = 20 ,
                   title = f"Performance of {model_name()} (on train-set)" ,
                   save_figure = True ,
-                  fig_name = f"bin_clf/{args.model}/{args.model}_{args.threshold}_train_prf" )
+                  fig_name = f"bin-clf/{args.model}/{args.model}_{args.threshold}_train_prf" )
 
 plot_prf_histos ( tpr_scores = np.array(tprs[1]) ,
                   tnr_scores = np.array(tnrs[1]) ,
                   bins = 20 ,
                   title = f"Performance of {model_name()} (on val-set)" ,
                   save_figure = True ,
-                  fig_name = f"bin_clf/{args.model}/{args.model}_{args.threshold}_val_prf" )
+                  fig_name = f"bin-clf/{args.model}/{args.model}_{args.threshold}_val_prf" )
 
 plot_prf_histos ( tpr_scores = np.array(tprs[2]) ,
                   tnr_scores = np.array(tnrs[2]) ,
                   bins = 20 ,
                   title = f"Performance of {model_name()} (on test-set)" ,
                   save_figure = True ,
-                  fig_name = f"bin_clf/{args.model}/{args.model}_{args.threshold}_test_prf" )
+                  fig_name = f"bin-clf/{args.model}/{args.model}_{args.threshold}_test_prf" )
 
 if importances:
   feat_names = [ "SUV_midpoint" , "SUV_mean" , "TLG (mL)" , "SUV_skewness" , "SUV_kurtosis" , "GLCM_homogeneity" , 
@@ -388,10 +385,7 @@ else:
 roc_vars = np.c_ [ np.mean(roc_curves, axis = 0) , np.std(roc_curves, axis = 0)[:,2] ]
 
 score_dir  = "scores"
-score_name = f"{args.model}_{args.threshold}"
-
-if VERSIONING:
-  score_name += version
+score_name = f"bin-clf_{args.model}_{args.threshold}"
 
 filename = f"{score_dir}/{score_name}.npz"
 np . savez ( filename, roc_vars = roc_vars )
