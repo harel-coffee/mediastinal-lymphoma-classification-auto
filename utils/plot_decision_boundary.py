@@ -1,142 +1,126 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from datetime                  import datetime
-from sklearn.base              import BaseEstimator
-from sklearn.model_selection   import cross_val_predict
-from sklearn.feature_selection import RFECV
+from datetime        import datetime
+from sklearn.metrics import confusion_matrix
+from .custom_predictions import custom_predictions
 
-from .save_figure              import save_figure
-from .custom_predictions       import custom_predictions
-from .precision_recall_scores  import precision_recall_scores
+RESOLUTION = 100
 
 
-def plot_decision_boundary ( model : BaseEstimator , 
-                             X_true : np.ndarray , 
-                             y_true : np.ndarray ,
-                             labels : list = [0,1] ,
-                             strategy : str = None ,
-                             feature_names : list = None ,
+def plot_decision_boundary ( y_true    : np.ndarray , 
+                             y_scores  : np.ndarray ,
+                             X_feat    : np.ndarray ,
+                             feat_name : str  ,
+                             strategy  : str  = None ,
+                             labels    : list = None ,
+                             save_figure : bool = False ,
                              fig_name : str = None ) -> None:
-  ## Shape check
-  if X_true.shape[0] != len(y_true):
-    raise ValueError ( "`X_true` and `y_true` lengths don't match." )
-
-  ## Label check
-  if len(labels) != 2:
-    raise ValueError ( f"A binary problem has two labels, instead {len(labels)} passed." )
-
-  ## Predicted scores
-  scores = cross_val_predict ( model, X_true, y_true, cv = 3, method = "predict_proba" )
-  tp_scores = scores[np.nonzero(y_true == True)]
-  tn_scores = scores[np.nonzero(y_true == False)]
-
-  ## Feature ranking
-  selector = RFECV ( model, step = 1, cv = 3 )
-  selector . fit ( X_true, y_true )
-  ranks = selector . ranking_
-  high_rank_idx = np.argmin(ranks)
-
-  ## High ranked feature
-  tp_high_rnk_feat = X_true[:,high_rank_idx][np.nonzero(y_true == True)]
-  tn_high_rnk_feat = X_true[:,high_rank_idx][np.nonzero(y_true == False)]
-  if feature_names is not None:
-    if X_true.shape[1] != len(feature_names):
-      raise ValueError ( f"The feature space has {X_true.shape[1]} dimensions, "
-                         f"but the feature names passed are {len(feature_names)}." )
-    else:
-      high_rnk_feat = feature_names[high_rank_idx]
-  else:
-    high_rnk_feat = "Most important feature"
+  prec70 = np.zeros(2) ; prec80 = np.zeros(2) ; prec90 = np.zeros(2)
+  rec70  = np.zeros(2) ; rec80  = np.zeros(2) ; rec90  = np.zeros(2)
 
   if strategy is not None:
     ## PPV or TPR > 0.7
-    if strategy == "precision":
-      pred70, thr70 = custom_predictions (y_true, scores, precision_score = 0.7)
-      prec70, _ = precision_recall_scores (y_true, pred70)
-      textstr70 = "\n" . join ( [f"PPV : {prec70[1]:.3f}", f"NPV : {prec70[0]:.3f}"] )
-    elif strategy == "recall":
-      pred70, thr70 = custom_predictions (y_true, scores, recall_score = 0.7)
-      _, rec70 = precision_recall_scores (y_true, pred70)
-      textstr70 = "\n" . join ( [f"TPR : {rec70[1]:.3f}", f"TNR : {rec70[0]:.3f}"] )
-    props70 = dict (boxstyle = "round", facecolor = "wheat")
+    if (strategy == "precision") : y_pred70, thr70 = custom_predictions (y_true, y_scores, precision_score = 0.7)
+    elif (strategy == "recall")  : y_pred70, thr70 = custom_predictions (y_true, y_scores, recall_score = 0.7)
+    cm70 = confusion_matrix (y_true, y_pred70)
+    props70 = dict (boxstyle = "round", facecolor = "#bababa", edgecolor = "#404040")
 
     ## PPV or TPR > 0.8
-    if strategy == "precision":
-      pred80, thr80 = custom_predictions (y_true, scores, precision_score = 0.8)
-      prec80, _ = precision_recall_scores (y_true, pred80)
-      textstr80 = "\n" . join ( [f"PPV : {prec80[1]:.3f}", f"NPV : {prec80[0]:.3f}"] )
-    elif strategy == "recall":
-      pred80, thr80 = custom_predictions (y_true, scores, recall_score = 0.8)
-      _, rec80 = precision_recall_scores (y_true, pred80)
-      textstr80 = "\n" . join ( [f"TPR : {rec80[1]:.3f}", f"TNR : {rec80[0]:.3f}"] )
-    props80 = dict (boxstyle = "round", facecolor = "wheat")
+    if (strategy == "precision") : y_pred80, thr80 = custom_predictions (y_true, y_scores, precision_score = 0.8)
+    elif (strategy == "recall")  : y_pred80, thr80 = custom_predictions (y_true, y_scores, recall_score = 0.8)
+    cm80 = confusion_matrix (y_true, y_pred80)
+    props80 = dict (boxstyle = "round", facecolor = "#bababa", edgecolor = "#404040")
 
     ## PPV or TPR > 0.9
-    if strategy == "precision":
-      pred90, thr90 = custom_predictions (y_true, scores, precision_score = 0.9)
-      prec90, _ = precision_recall_scores (y_true, pred90)
-      textstr90 = "\n" . join ( [f"PPV : {prec90[1]:.3f}", f"NPV : {prec90[0]:.3f}"] )
-    elif strategy == "recall":
-      pred90, thr90 = custom_predictions (y_true, scores, recall_score = 0.9)
-      _, rec90 = precision_recall_scores (y_true, pred90)
-      textstr90 = "\n" . join ( [f"TPR : {rec90[1]:.3f}", f"TNR : {rec90[0]:.3f}"] )
-    props90 = dict (boxstyle = "round", facecolor = "wheat")
+    if (strategy == "precision") : y_pred90, thr90 = custom_predictions (y_true, y_scores, precision_score = 0.9)
+    elif (strategy == "recall")  : y_pred90, thr90 = custom_predictions (y_true, y_scores, recall_score = 0.9)
+    cm90 = confusion_matrix (y_true, y_pred90)
+    props90 = dict (boxstyle = "round", facecolor = "#bababa", edgecolor = "#404040")
 
-  ## Plot limits
+    ## precision/recall computation
+    for i in range (2):
+      prec70[i] = cm70[i,i] / np.sum ( cm70[:,i] )
+      rec70[i]  = cm70[i,i] / np.sum ( cm70[i,:] )
+      prec80[i] = cm80[i,i] / np.sum ( cm80[:,i] )
+      rec80[i]  = cm80[i,i] / np.sum ( cm80[i,:] )
+      prec90[i] = cm90[i,i] / np.sum ( cm90[:,i] )
+      rec90[i]  = cm90[i,i] / np.sum ( cm90[i,:] )
+
+    ## box text
+    if (strategy == "precision"):
+      textstr70 = "\n" . join ( [f"PPV : {prec70[1]:.3f}", f"NPV : {prec70[0]:.3f}"] )
+      textstr80 = "\n" . join ( [f"PPV : {prec80[1]:.3f}", f"NPV : {prec80[0]:.3f}"] )
+      textstr90 = "\n" . join ( [f"PPV : {prec90[1]:.3f}", f"NPV : {prec90[0]:.3f}"] )
+    elif (strategy == "recall"):
+      textstr70 = "\n" . join ( [f"TPR : {rec70[1]:.3f}", f"TNR : {rec70[0]:.3f}"] )
+      textstr80 = "\n" . join ( [f"TPR : {rec80[1]:.3f}", f"TNR : {rec80[0]:.3f}"] )
+      textstr90 = "\n" . join ( [f"TPR : {rec90[1]:.3f}", f"TNR : {rec90[0]:.3f}"] )
+
+  ## true positive and true negative scores
+  tp_scores = y_scores[np.nonzero(y_true == True)]
+  tn_scores = y_scores[np.nonzero(y_true == False)]
+
+  ## plot limits
   x_min = np.min ( [np.min(tp_scores[:,1]), np.min(tn_scores[:,1])] ) - 0.05
   x_max = np.max ( [np.max(tp_scores[:,1]), np.max(tn_scores[:,1])] ) + 0.05
-  y_min = np.min ( X_true[:,high_rank_idx] ) - 0.5  
-  y_max = np.max ( X_true[:,high_rank_idx] ) + 0.5
+  y_min = np.min ( X_feat ) - 0.25 * ( np.max(X_feat) - np.min(X_feat) )  
+  y_max = np.max ( X_feat ) + 0.25 * ( np.max(X_feat) - np.min(X_feat) )
 
-  ## Text positions
+  ## text positions
   if strategy is not None:
-    if strategy == "precision":
+    if (strategy == "precision"):
       x_txt70 = thr70 - 0.5 * (thr70 - x_min)
       x_txt80 = thr80 - 0.5 * (thr80 - thr70)
       x_txt90 = thr90 - 0.5 * (thr90 - thr80)
-    elif strategy == "recall":
+    elif (strategy == "recall"):
       x_txt70 = thr70 + 0.5 * (x_max - thr70)
       x_txt80 = thr80 + 0.5 * (thr70 - thr80)
       x_txt90 = thr90 + 0.5 * (thr80 - thr90)
-    y_txt = y_min + 0.25
+    y_txt_top    = y_max - 0.1 * ( y_max - y_min )
+    y_txt_bottom = y_min + 0.1 * ( y_max - y_min )
 
-  ## Plot classification results
-  plt.figure (figsize = (8,6), dpi = 100)
-  plt.xlabel ("Predicted PMBCL probability", fontsize = 12)
-  plt.ylabel ("{}" . format (high_rnk_feat), fontsize = 12)
+  ## ## figure setup
+  fig, ax = plt.subplots (figsize = (8,6), dpi = RESOLUTION)
+  ax.set_xlabel ("Predicted PMBCL probability", fontsize = 12)
+  ax.set_ylabel (f"{feat_name}", fontsize = 12)
 
   if strategy is not None:
     ## PPV or TPR > 0.7
-    plt.axvspan (x_min, thr70, color = "salmon", alpha = 0.15, zorder = 1)
-    plt.plot ([thr70,thr70], [y_min,y_max], color = "black", linestyle = "-", zorder = 2)
-    plt.axvspan (thr70, x_max, color = "cornflowerblue", alpha = 0.15, zorder = 1)
-    plt.text (x_txt70, y_txt, textstr70, fontsize = 8, weight = "bold", ha = "center", va = 'center', bbox = props70)
+    ax.axvspan (x_min, thr70, color = "#f4a582", alpha = 0.15, zorder = 1)
+    ax.plot ([thr70,thr70], [y_min,y_max], color = "black", linestyle = "-", zorder = 2)
+    ax.axvspan (thr70, x_max, color = "#92c5de", alpha = 0.15, zorder = 1)
+    ax.text (x_txt70, y_txt_bottom, textstr70, fontsize = 8, color = "#404040", weight = "bold", ha = "center", va = "center", bbox = props70)
 
     ## PPV or TPR > 0.8
-    plt.axvspan (x_min, thr80, color = "salmon", alpha = 0.15, zorder = 1)
-    plt.plot ([thr80,thr80], [y_min,y_max], color = "black", linestyle = "--", zorder = 2)
-    plt.axvspan (thr80, x_max, color = "cornflowerblue", alpha = 0.15, zorder = 1)
-    plt.text (x_txt80, y_txt, textstr80, fontsize = 8, weight = "bold", ha = "center", va = 'center', bbox = props80)
+    ax.axvspan (x_min, thr80, color = "#f4a582", alpha = 0.15, zorder = 1)
+    ax.plot ([thr80,thr80], [y_min,y_max], color = "black", linestyle = "--", zorder = 2)
+    ax.axvspan (thr80, x_max, color = "#92c5de", alpha = 0.15, zorder = 1)
+    ax.text (x_txt80, y_txt_top, textstr80, fontsize = 8, color = "#404040", weight = "bold", ha = "center", va = "center", bbox = props80)
 
     ## PPV or TPR > 0.9
-    plt.axvspan (x_min, thr90, color = "salmon", alpha = 0.15, zorder = 1)
-    plt.plot ([thr90,thr90], [y_min,y_max], color = "black", linestyle = ":", zorder = 2)
-    plt.axvspan (thr90, x_max, color = "cornflowerblue", alpha = 0.15, zorder = 1)
-    plt.text (x_txt90, y_txt, textstr90, fontsize = 8, weight = "bold", ha = "center", va = 'center', bbox = props90)
+    ax.axvspan (x_min, thr90, color = "#f4a582", alpha = 0.15, zorder = 1)
+    ax.plot ([thr90,thr90], [y_min,y_max], color = "black", linestyle = ":", zorder = 2)
+    ax.axvspan (thr90, x_max, color = "#92c5de", alpha = 0.15, zorder = 1)
+    ax.text (x_txt90, y_txt_bottom, textstr90, fontsize = 8, color = "#404040", weight = "bold", ha = "center", va = "center", bbox = props90)
     
-  plt.scatter (tp_scores[:,1], tp_high_rnk_feat, color = "blue", marker = "^", label = f"{labels[1]}", zorder = 3)
-  plt.scatter (tn_scores[:,1], tn_high_rnk_feat, color = "red", marker = "o", label = f"{labels[0]}", zorder = 3)
-  plt.legend (title = "True label", loc = "upper left", fontsize = 10)
-  plt.axis ([x_min, x_max, y_min, y_max])
-  
-  ## Save figure
+  ax.scatter (tp_scores[:,1], X_feat[np.nonzero(y_true == True)] , color = "#0571b0", marker = "^", label = f"{labels[1]}", zorder = 4)
+  ax.scatter (tn_scores[:,1], X_feat[np.nonzero(y_true == False)], color = "#ca0020", marker = "o", label = f"{labels[0]}", zorder = 3)
+  ax.legend (title = "True label", loc = "upper left", fontsize = 10)
+  ax.axis ([x_min, x_max, y_min, y_max])
+
+  ## figure name default
   if fig_name is None:
     timestamp = str (datetime.now()) . split (".") [0]
     timestamp = timestamp . replace (" ","_")
-    fig_name = "plot_decision_boundary_"
+    fig_name = "dec_bound_"
     for time, unit in zip ( timestamp.split(":"), ["h","m","s"] ):
       fig_name += time + unit   # YYYY-MM-DD_HHhMMmSSs
-  save_figure ( fig_name )
+  filename = f"docs/img/{fig_name}.png"
+  
+  plt.tight_layout()
+  if save_figure: 
+    plt.savefig ( filename, format = "png", dpi = RESOLUTION )
+    print (f"Figure correctly exported to {filename}")
 
   plt.show()
