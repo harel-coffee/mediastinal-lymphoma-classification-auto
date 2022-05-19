@@ -1,5 +1,5 @@
 # Lymphoma classification
-[![](https://zenodo.org/badge/DOI/10.5281/zenodo.5637324.svg)](https://doi.org/10.5281/zenodo.5637324)
+[![](https://zenodo.org/badge/DOI/10.5281/zenodo.6563937.svg)](https://doi.org/10.5281/zenodo.6563937)
 [![](https://img.shields.io/github/release/mbarbetti/lymphoma-classification.svg)](https://GitHub.com/mbarbetti/lymphoma-classification/releases/)
 [![](https://img.shields.io/github/issues/mbarbetti/lymphoma-classification.svg)](https://github.com/mbarbetti/lymphoma-classification/issues/)
 [![](https://img.shields.io/github/issues-pr/mbarbetti/lymphoma-classification.svg)](https://github.com/mbarbetti/lymphoma-classification/pulls/)
