@@ -21,9 +21,9 @@ from sklearn.ensemble          import RandomForestClassifier, GradientBoostingCl
 from sklearn.feature_selection import RFECV
 from sklearn.metrics           import roc_auc_score, confusion_matrix, roc_curve
 
-from utils import custom_predictions, plot_conf_matrices, plot_bin_prf_histos, plot_feat_importance
+from utils import custom_predictions, multiclass_predictions, plot_conf_matrices, plot_multi_prf_histos
 
-LABELS = ["cHL", "PMBCL"]
+LABELS = ["cHL", "GZL", "PMBCL"]
 
 #   +-------------------+
 #   |   Options setup   |
@@ -80,25 +80,26 @@ cols = list ( data.columns )
 X_cols = cols[2:]
 y_cols = "lymphoma_type"
 
-id = data.query("lymphoma_type != 2")["ID"]   . to_numpy() . flatten()
-X  = data.query("lymphoma_type != 2")[X_cols] . to_numpy()
-y  = data.query("lymphoma_type != 2")[y_cols] . to_numpy() . flatten()
-y  = ( y == 3 )   # PMBCL/cHL classification
+X = data.query("lymphoma_type != 2")[X_cols] . to_numpy()
+y = data.query("lymphoma_type != 2")[y_cols] . to_numpy() . flatten()
+y = ( y == 3 )   # PMBCL/cHL classification
+
+X_gz = data.query("lymphoma_type == 2")[X_cols] . to_numpy()
+y_gz = data.query("lymphoma_type == 2")[y_cols] . to_numpy() . flatten()
 
 #   +------------------------+
 #   |   Sub-sample studies   |
 #   +------------------------+
 
 conf_matrices = [ list() , list() , list() ]   # container for confusion matrices
-tprs = [ list() , list() , list() ]            # container for TPRs
-tnrs = [ list() , list() , list() ]            # container for TNRs
-roc_curves  = list()                  # container for ROC curve variables
-importances = list()                  # container for feature importances
+recalls       = [ list() , list() , list() ]   # container for recalls
+precisions    = [ list() , list() , list() ]   # container for precisions
+roc_curves    = [ list() , list() ]            # container for ROC curve variables
 
 ## initial control values
 optimized = False
-append_to_roc = True
-n_roc_points  = -1
+append_to_roc = [ True , True ]
+n_roc_points  = [ -1   , -1   ]
 
 for i in tqdm(range(250)):
 
@@ -108,18 +109,21 @@ for i in tqdm(range(250)):
 
   sss = StratifiedShuffleSplit ( n_splits = 1, test_size = test_size )
   for idx_train, idx_test in sss . split ( X, y ):
-    X_train , y_train , id_train = X[idx_train] , y[idx_train] , id[idx_train]
-    X_test  , y_test  , id_test  = X[idx_test]  , y[idx_test]  , id[idx_test]
+    X_train , y_train = X[idx_train] , y[idx_train]
+    X_test  , y_test  = X[idx_test]  , y[idx_test] 
 
   #   +------------------------+
   #   |   Data preprocessing   |
   #   +------------------------+
 
   scaler_train = MinMaxScaler()
-  X_train = scaler_train . fit_transform (X_train)
+  X_train = scaler_train.fit_transform (X_train)
 
   scaler_test = MinMaxScaler()
-  X_test = scaler_test . fit_transform (X_test)
+  X_test = scaler_test.fit_transform (X_test)
+
+  scaler_gz = MinMaxScaler()
+  X_gz = scaler_gz.fit_transform (X_gz)
 
   #   +------------------+
   #   |   Optuna setup   |
@@ -197,10 +201,6 @@ for i in tqdm(range(250)):
                              load_if_exists = False )
       optimized = True
 
-    # df = study . trials_dataframe ( attrs = ("params", "value") )
-    # df_head = df . sort_values ( by = "value", ascending = False ) . head()
-    # print ( df_head )
-
     best_model = RandomForestClassifier ( n_estimators = study.best_params["n_estims"]  ,
                                           max_depth    = study.best_params["max_depth"] )
 
@@ -240,13 +240,28 @@ for i in tqdm(range(250)):
                              load_if_exists = False )
       optimized = True
 
-    # df = study . trials_dataframe ( attrs = ("params", "value") )
-    # df_head = df . sort_values ( by = "value", ascending = False ) . head()
-    # print ( df_head )
-
     best_model = GradientBoostingClassifier ( learning_rate = study.best_params["learn_rate"] , 
                                               n_estimators  = study.best_params["n_estims"]   , 
                                               max_depth     = study.best_params["max_depth"]  )
+
+  #   +---------------------------+
+  #   |   Multiclass boundaries   |
+  #   +---------------------------+
+
+  def get_decision_boundaries ( y_scores : np.ndarray, threshold : float, width : float = 0.0 ) -> tuple:
+    hist, bins = np.histogram ( y_scores[:,1], bins = 20 )
+    cumsum  = np.cumsum ( hist.astype(np.float32) )
+    cumsum /= cumsum[-1]
+
+    scores = ( bins[1:] + bins[:-1] ) / 2.0
+    th_cumsum = np.interp ( threshold, scores, cumsum )   # cumulative value of the threshold
+
+    th_cumsum_min = th_cumsum - width / 2.0
+    score_min = np.interp (th_cumsum_min, cumsum, scores)
+
+    th_cumsum_max = th_cumsum + width / 2.0
+    score_max = np.interp (th_cumsum_max, cumsum, scores)
+    return score_min, score_max
 
   #   +-----------------------------------------+
   #   |   Model performance on train/test set   |
@@ -261,63 +276,92 @@ for i in tqdm(range(250)):
   sm = SMOTE()   # oversampling technique
   X_trn_res, y_trn_res = sm.fit_resample ( X_trn , y_trn )
 
+  ## combine the datasets
+  X_trn_comb = np.concatenate ( [ X_trn, X_gz ] )
+  y_trn_comb = np.concatenate ( [ np.where(y_trn, 3, 1), y_gz ] )
+
+  X_val_comb = np.concatenate ( [ X_val, X_gz ] )
+  y_val_comb = np.concatenate ( [ np.where(y_val, 3, 1), y_gz ] )
+
+  X_test_comb = np.concatenate ( [ X_test, X_gz ] )
+  y_test_comb = np.concatenate ( [ np.where(y_test, 3, 1), y_gz ] )
+
+  X_eval_comb = np.concatenate ( [ X_val, X_test, X_gz ] )
+  y_eval_comb = np.concatenate ( [ np.where(y_val, 3, 1) , np.where(y_test, 3, 1), y_gz ] )
+
   ## model training
   best_model . fit (X_trn_res, y_trn_res)
 
   ## model predictions
   y_scores_trn = best_model.predict_proba ( X_trn )
-  y_pred_trn , threshold = custom_predictions ( y_true = y_trn , 
-                                                y_scores = y_scores_trn , 
-                                                recall_score = rec_score ,
-                                                precision_score = prec_score )   # pred for the true train-set
+  _, threshold = custom_predictions ( y_true = y_trn , 
+                                      y_scores = y_scores_trn , 
+                                      recall_score = rec_score ,
+                                      precision_score = prec_score )   
 
-  y_scores_val = best_model.predict_proba ( X_val )
-  y_pred_val = ( y_scores_val[:,1] >= threshold )   # pred for the val-set
+  y_scores_trn_comb = best_model.predict_proba ( X_trn_comb )
+  y_pred_trn = multiclass_predictions ( y_true = y_trn_comb ,
+                                        y_scores = y_scores_trn_comb ,
+                                        boundaries = get_decision_boundaries ( y_scores_trn, threshold, len(y_gz) / len(y_trn_comb) ) )   # pred for the true train-set
 
-  y_scores_test = best_model.predict_proba ( X_test )
-  y_pred_test = ( y_scores_test[:,1] >= threshold )   # pred for the test-set
+  y_scores_val_comb = best_model.predict_proba ( X_val_comb )
+  y_pred_val = multiclass_predictions ( y_true = y_val_comb ,
+                                        y_scores = y_scores_val_comb ,
+                                        boundaries = get_decision_boundaries ( y_scores_trn, threshold, len(y_gz) / len(y_trn_comb) ) )   # pred for the val-set
 
-  y_scores_eval = best_model.predict_proba ( np.concatenate ([X_val, X_test]) )
-  y_pred_eval = ( y_scores_eval[:,1] >= threshold )   # pred for the val-set + test-set
+  y_scores_test_comb = best_model.predict_proba ( X_test_comb )
+  y_pred_test = multiclass_predictions ( y_true = y_test_comb ,
+                                         y_scores = y_scores_test_comb ,
+                                         boundaries = get_decision_boundaries ( y_scores_trn, threshold, len(y_gz) / len(y_trn_comb) ) )   # pred for the test-set
+
+  y_scores_eval_comb = best_model.predict_proba ( X_eval_comb )
+  y_pred_eval = multiclass_predictions ( y_true = y_eval_comb ,
+                                         y_scores = y_scores_eval_comb ,
+                                         boundaries = get_decision_boundaries ( y_scores_trn, threshold, len(y_gz) / len(y_trn_comb) ) )   # pred for the val-set + test-set
 
   ## model performances
-  conf_matrix_trn = confusion_matrix ( y_trn, y_pred_trn )
-  tpr_trn = conf_matrix_trn[1,1] / np.sum ( conf_matrix_trn[1,:] )
-  tnr_trn = conf_matrix_trn[0,0] / np.sum ( conf_matrix_trn[0,:] )
-  conf_matrices[0] . append (conf_matrix_trn)   # add to the relative container
-  tprs[0] . append (tpr_trn)                    # add to the relative container
-  tnrs[0] . append (tnr_trn)                    # add to the relative container
+  conf_matrix_trn = confusion_matrix ( y_trn_comb, y_pred_trn )
+  recall_2 = conf_matrix_trn[2,2] / np.sum ( conf_matrix_trn[2,:] )
+  recall_1 = conf_matrix_trn[1,1] / np.sum ( conf_matrix_trn[1,:] )
+  precision_2 = conf_matrix_trn[2,2] / np.sum ( conf_matrix_trn[:,2] )
+  precision_1 = conf_matrix_trn[1,1] / np.sum ( conf_matrix_trn[:,1] )
+  conf_matrices[0] . append ( conf_matrix_trn )           # add to the relative container
+  recalls[0]    . append ( [recall_2, recall_1] )         # add to the relative container
+  precisions[0] . append ( [precision_2, precision_1] )   # add to the relative container
 
-  conf_matrix_val = confusion_matrix ( y_val, y_pred_val )
-  tpr_val = conf_matrix_val[1,1] / np.sum ( conf_matrix_val[1,:] )
-  tnr_val = conf_matrix_val[0,0] / np.sum ( conf_matrix_val[0,:] )
-  conf_matrices[1] . append (conf_matrix_val)   # add to the relative container
-  tprs[1] . append (tpr_val)                    # add to the relative container
-  tnrs[1] . append (tnr_val)                    # add to the relative container
+  conf_matrix_val = confusion_matrix ( y_val_comb, y_pred_val )
+  recall_2 = conf_matrix_val[2,2] / np.sum ( conf_matrix_val[2,:] )
+  recall_1 = conf_matrix_val[1,1] / np.sum ( conf_matrix_val[1,:] )
+  precision_2 = conf_matrix_val[2,2] / np.sum ( conf_matrix_val[:,2] )
+  precision_1 = conf_matrix_val[1,1] / np.sum ( conf_matrix_val[:,1] )
+  conf_matrices[1] . append ( conf_matrix_val )           # add to the relative container
+  recalls[1]    . append ( [recall_2, recall_1] )         # add to the relative container
+  precisions[1] . append ( [precision_2, precision_1] )   # add to the relative container
 
-  conf_matrix_test = confusion_matrix ( y_test, y_pred_test )
-  tpr_test = conf_matrix_test[1,1] / np.sum ( conf_matrix_test[1,:] )
-  tnr_test = conf_matrix_test[0,0] / np.sum ( conf_matrix_test[0,:] )
-  conf_matrices[2] . append (conf_matrix_test)   # add to the relative container
-  tprs[2] . append (tpr_test)                    # add to the relative container
-  tnrs[2] . append (tnr_test)                    # add to the relative container
+  conf_matrix_test = confusion_matrix ( y_test_comb, y_pred_test )
+  recall_2 = conf_matrix_test[2,2] / np.sum ( conf_matrix_test[2,:] )
+  recall_1 = conf_matrix_test[1,1] / np.sum ( conf_matrix_test[1,:] )
+  precision_2 = conf_matrix_test[2,2] / np.sum ( conf_matrix_test[:,2] )
+  precision_1 = conf_matrix_test[1,1] / np.sum ( conf_matrix_test[:,1] )
+  conf_matrices[2] . append ( conf_matrix_test )          # add to the relative container
+  recalls[2]    . append ( [recall_2, recall_1] )         # add to the relative container
+  precisions[2] . append ( [precision_2, precision_1] )   # add to the relative container
 
-  auc_eval = roc_auc_score ( np.concatenate([y_val, y_test]), y_scores_eval[:,1] )
-  fpr_eval , tpr_eval , _ = roc_curve ( np.concatenate([y_val, y_test]), y_scores_eval[:,1] )
+  auc_eval_2 = roc_auc_score ( (y_eval_comb == 3), y_scores_eval_comb[:,1] )                # one-vs-all AUC score (PMBCL class)
+  fpr_eval_2 , tpr_eval_2 , _ = roc_curve ( (y_eval_comb == 3), y_scores_eval_comb[:,1] )   # one-vs-all ROC curve (PMBCL class)
 
-  if (len(fpr_eval) == n_roc_points): append_to_roc = True
+  if (len(fpr_eval_2) == n_roc_points[0]): append_to_roc[0] = True
+  if append_to_roc[0]:
+    roc_curves[0] . append ( np.c_ [1 - fpr_eval_2, tpr_eval_2, auc_eval_2 * np.ones_like(fpr_eval_2)] )   # add to the relative container
+    append_to_roc[0] = False ; n_roc_points[0] = len(fpr_eval_2)
 
-  if append_to_roc:
-    roc_curves . append ( np.c_ [1 - fpr_eval, tpr_eval, auc_eval * np.ones_like(fpr_eval)] )
-    append_to_roc = False ; n_roc_points = len(fpr_eval)
+  auc_eval_1 = roc_auc_score ( (y_eval_comb == 2), y_scores_eval_comb[:,1] )                # one-vs-all AUC score (GZL class)
+  fpr_eval_1 , tpr_eval_1 , _ = roc_curve ( (y_eval_comb == 2), y_scores_eval_comb[:,1] )   # one-vs-all ROC curve (GZL class)
 
-  ## feature importances
-  try:
-    selector = RFECV (best_model, step = 1, cv = 3)
-    selector . fit (X_train, y_train)
-    importances . append ( selector.cv_results_["mean_test_score"] )
-  except:
-    importances = None
+  if (len(fpr_eval_1) == n_roc_points[1]): append_to_roc[1] = True
+  if append_to_roc[1]:
+    roc_curves[1] . append ( np.c_ [1 - fpr_eval_1, tpr_eval_1, auc_eval_1 * np.ones_like(fpr_eval_1)] )   # add to the relative container
+    append_to_roc[1] = False ; n_roc_points[1] = len(fpr_eval_1)
 
 #   +----------------------+
 #   |   Plots generation   |
@@ -334,63 +378,54 @@ plot_conf_matrices ( conf_matrix = np.mean(conf_matrices[0], axis = 0) . astype(
                      labels = LABELS      ,
                      show_matrix = "both" , 
                      save_figure = True   ,
-                     fig_name = f"bin-clf/{args.model}/{args.model}_{args.threshold}_train" )
+                     fig_name = f"multi-clf/{args.model}/{args.model}_{args.threshold}_train" )
 
 plot_conf_matrices ( conf_matrix = np.mean(conf_matrices[1], axis = 0) . astype(np.int32) ,
                      labels = LABELS      ,
                      show_matrix = "both" , 
                      save_figure = True   ,
-                     fig_name = f"bin-clf/{args.model}/{args.model}_{args.threshold}_val" )
+                     fig_name = f"multi-clf/{args.model}/{args.model}_{args.threshold}_val" )
 
 plot_conf_matrices ( conf_matrix = np.mean(conf_matrices[2], axis = 0) . astype(np.int32) ,
                      labels = LABELS      ,
                      show_matrix = "both" , 
                      save_figure = True   ,
-                     fig_name = f"bin-clf/{args.model}/{args.model}_{args.threshold}_test" )
+                     fig_name = f"multi-clf/{args.model}/{args.model}_{args.threshold}_test" )
 
-plot_bin_prf_histos ( tpr_scores = np.array(tprs[0]) ,
-                      tnr_scores = np.array(tnrs[0]) ,
-                      bins = 25 ,
-                      title = f"Performance of {model_name()} (on train-set)" ,
-                      save_figure = True ,
-                      fig_name = f"bin-clf/{args.model}/{args.model}_{args.threshold}_train_prf" )
+plot_multi_prf_histos ( rec_scores  = ( np.array(recalls[0])[:,0]    , np.array(recalls[0])[:,1]    ) ,
+                        prec_scores = ( np.array(precisions[0])[:,0] , np.array(precisions[0])[:,1] ) ,
+                        bins = 25 ,
+                        title = f"Performance of multi-class {model_name()} (on train-set)" ,
+                        cls_labels = (LABELS[2], LABELS[1]) ,
+                        save_figure = True ,
+                        fig_name = f"multi-clf/{args.model}/{args.model}_{args.threshold}_train_prf" )
 
-plot_bin_prf_histos ( tpr_scores = np.array(tprs[1]) ,
-                      tnr_scores = np.array(tnrs[1]) ,
-                      bins = 25 ,
-                      title = f"Performance of {model_name()} (on val-set)" ,
-                      save_figure = True ,
-                      fig_name = f"bin-clf/{args.model}/{args.model}_{args.threshold}_val_prf" )
+plot_multi_prf_histos ( rec_scores  = ( np.array(recalls[1])[:,0]    , np.array(recalls[1])[:,1]    ) ,
+                        prec_scores = ( np.array(precisions[1])[:,0] , np.array(precisions[1])[:,1] ) ,
+                        bins = 25 ,
+                        title = f"Performance of multi-class {model_name()} (on val-set)" ,
+                        cls_labels = (LABELS[2], LABELS[1]) ,
+                        save_figure = True ,
+                        fig_name = f"multi-clf/{args.model}/{args.model}_{args.threshold}_val_prf" )
 
-plot_bin_prf_histos ( tpr_scores = np.array(tprs[2]) ,
-                      tnr_scores = np.array(tnrs[2]) ,
-                      bins = 25 ,
-                      title = f"Performance of {model_name()} (on test-set)" ,
-                      save_figure = True ,
-                      fig_name = f"bin-clf/{args.model}/{args.model}_{args.threshold}_test_prf" )
-
-if importances:
-  feat_names = [ "SUV_midpoint" , "SUV_mean" , "TLG (mL)" , "SUV_skewness" , "SUV_kurtosis" , "GLCM_homogeneity" , 
-                 "GLCM_entropy ($\log_{10}$)" , "GLRLM_SRE" , "GLRLM_LRE" , "GLZLM_LGZE" , "GLZLM_HGZE" ]
-  
-  plot_feat_importance ( feat_scores = np.mean(importances, axis = 0) ,
-                         feat_errors = np.std(importances, axis = 0)  ,
-                         feat_names  = feat_names ,
-                         title = f"Feature importances for {model_name()}" ,
-                         save_figure = True ,
-                         fig_name = f"bin-clf/{args.model}/{args.model}_{args.threshold}_feat_imp" )
-else:
-  print ("Warning! The model selected doesn't allow to study the feature importance.")
+plot_multi_prf_histos ( rec_scores  = ( np.array(recalls[2])[:,0]    , np.array(recalls[2])[:,1]    ) ,
+                        prec_scores = ( np.array(precisions[2])[:,0] , np.array(precisions[2])[:,1] ) ,
+                        bins = 25 ,
+                        title = f"Performance of multi-class {model_name()} (on test-set)" ,
+                        cls_labels = (LABELS[2], LABELS[1]) ,
+                        save_figure = True ,
+                        fig_name = f"multi-clf/{args.model}/{args.model}_{args.threshold}_test_prf" )
 
 #   +-------------------+
 #   |   Scores export   |
 #   +-------------------+
 
-roc_vars = np.c_ [ np.mean(roc_curves, axis = 0) , np.std(roc_curves, axis = 0)[:,2] ]
+roc_vars_lbl3 = np.c_ [ np.mean(roc_curves[0], axis = 0) , np.std(roc_curves[0], axis = 0)[:,2] ]
+roc_vars_lbl2 = np.c_ [ np.mean(roc_curves[1], axis = 0) , np.std(roc_curves[1], axis = 0)[:,2] ]
 
 score_dir  = "scores"
 score_name = f"{args.model}_{args.threshold}"
 
-filename = f"{score_dir}/bin-clf/{score_name}.npz"
-np . savez ( filename, roc_vars = roc_vars )
+filename = f"{score_dir}/multi-clf/{score_name}.npz"
+np . savez ( filename, roc_vars_lbl3 = roc_vars_lbl3, roc_vars_lbl2 = roc_vars_lbl2 )
 print (f"Scores correctly exported to {filename}")
