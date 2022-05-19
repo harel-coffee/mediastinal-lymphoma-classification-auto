@@ -9,7 +9,7 @@ storage/*.db
 models/*.pkl
 
 # Scores
-scores/*.npz
+scores/*/*.npz
 
 # Images
 docs/img/*/*/*.png

@@ -1,26 +1,47 @@
-[![Made withJupyter](https://img.shields.io/badge/Made%20with-Jupyter-orange?style=for-the-badge&logo=Jupyter)](https://jupyter.org/try)
-
-[![GitHub license](https://img.shields.io/github/license/mbarbetti/lymphoma-classification)](https://github.com/mbarbetti/lymphoma-classification)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5637324.svg)](https://doi.org/10.5281/zenodo.5637324)
-[![GitHub issues](https://img.shields.io/github/issues/mbarbetti/lymphoma-classification.svg)](https://github.com/mbarbetti/lymphoma-classification/issues/)
-[![GitHub pull-requests](https://img.shields.io/github/issues-pr/mbarbetti/lymphoma-classification.svg)](https://github.com/mbarbetti/lymphoma-classification/pulls/)
-[![GitHub watchers](https://img.shields.io/github/watchers/mbarbetti/lymphoma-classification?style=social)](https://github.com/mbarbetti/lymphoma-classification/watchers/)
-[![GitHub stars](https://img.shields.io/github/stars/mbarbetti/lymphoma-classification?style=social)](https://github.com/mbarbetti/lymphoma-classification/)
-
 # Lymphoma classification
-[👓 Matteo Barbetti](https://mbarbetti.github.io/) | Ph.D. student in Smart Computing | University of Florence, INFN-Firenze
+[![](https://zenodo.org/badge/DOI/10.5281/zenodo.5637324.svg)](https://doi.org/10.5281/zenodo.5637324)
+[![](https://img.shields.io/github/release/mbarbetti/lymphoma-classification.svg)](https://GitHub.com/mbarbetti/lymphoma-classification/releases/)
+[![](https://img.shields.io/github/issues/mbarbetti/lymphoma-classification.svg)](https://github.com/mbarbetti/lymphoma-classification/issues/)
+[![](https://img.shields.io/github/issues-pr/mbarbetti/lymphoma-classification.svg)](https://github.com/mbarbetti/lymphoma-classification/pulls/)
+[![](https://badgen.net/github/stars/mbarbetti/lymphoma-classification)](https://github.com/mbarbetti/lymphoma-classification/stargazers/)
 
 ## About
-Bulky mediastinal lymphoma classification with Machine Learning techniques.
+Classification of bulky mediastinal lymphomas based on radiomic features.
 
-## Contents
-- **Data preparation** [[Jupyter Notebook](https://github.com/mbarbetti/lymphoma-classification/blob/master/1_data_preparation.ipynb)]
-  - dataset cleaning and data-format correction
-- **Data visualization** [[Jupyter Notebook](https://github.com/mbarbetti/lymphoma-classification/blob/master/2_data_visualization.ipynb)]
-  - heavy reduction of input features to remove correlations
-- **Binary classification** [[Jupyter Notebook](https://github.com/mbarbetti/lymphoma-classification/blob/master/3_binary_classification.ipynb)]
-  - HL and non-HL classification using several ML-techniques
-- **Multiclass classification** [[Jupyter Notebook](https://github.com/mbarbetti/lymphoma-classification/blob/master/4_multiclass_classification.ipynb)]
-  - HL, GZ and PML classification using several ML-techniques
-- **Lymphoma classification** [[Jupyter Notebook](https://github.com/mbarbetti/lymphoma-classification/blob/master/5_lymphoma_classification.ipynb)]
-  - binary classification in HL and PML promoted to multiclass classification
+## Jupyter notebooks
+[**`0_dataset_cleaning.ipynb`**](https://github.com/mbarbetti/lymphoma-classification/blob/master/0_dataset_cleaning.ipynb)
+  - Dataset cleaning
+  - Data-format correction
+  - **NEW!** Treatment of NaN values
+
+[**`1_dataset_visualization.ipynb`**](https://github.com/mbarbetti/lymphoma-classification/blob/master/1_dataset_visualization.ipynb)
+  - Visualization of the radiomic features distributions
+  - **NEW!** Systematic study of LIFEx output (based on [LIFEx docs](https://www.lifexsoft.org/index.php/resources/documentation))
+  - Heavy reduction of input features to remove duplicated variables
+  - **NEW!** Only robust and independent texture features [[Orlhac 2015](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0145063)] are kept
+
+[**`2_dataset_reduction.ipynb`**](https://github.com/mbarbetti/lymphoma-classification/blob/master/2_dataset_reduction.ipynb)
+  - Correlation studies
+  - Removal of strongly-correlated features
+  - **NEW!** Use of U-test to measure the discriminant power
+  - Removal of features without discriminant power
+
+[**`3_binary_classification.ipynb`**](https://github.com/mbarbetti/lymphoma-classification/blob/master/3_binary_classification.ipynb)
+  - Binary classification of lymphomas in cHL and PMBCL
+  - Models tested: logistic regression, random forest and gradient BDT
+  - **NEW!** More models tested: linear SVM and gaussian processes
+  - Comparison of models performance (ROC curves)
+  - Evaluation of models performance on test-set
+  - **NEW!** Uncertainties study (only on [`model_bin_classifier.py`](https://github.com/mbarbetti/lymphoma-classification/blob/master/model_bin_classifier.py))
+
+[**`4_multi_classification.ipynb`**](https://github.com/mbarbetti/lymphoma-classification/blob/master/4_multi_classification.ipynb)
+  - Binary classifiers promoted to multiclass classifiers
+  - Multiclass classification of lymphomas in cHL, GZL and PMBCL
+  - **NEW!** More models tested: linear SVM and gaussian processes
+  - **NEW!** Comparison of models performance (one-vs-all ROC curves)
+  - Evaluation of models performance on test-set
+  - **NEW!** Uncertainties study (only on [`model_multi_classifier.py`](https://github.com/mbarbetti/lymphoma-classification/blob/master/model_multi_classifier.py))
+
+## License
+
+[MIT License](LICENSE)
