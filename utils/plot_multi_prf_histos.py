@@ -3,11 +3,11 @@ import matplotlib.pyplot as plt
 
 from datetime import datetime
 
-RESOLUTION = 100
+RESOLUTION = 300
 
 
-def plot_multi_prf_histos ( rec_scores  : tuple ,
-                            prec_scores : tuple ,
+def plot_multi_prf_histos ( tpr_scores  : tuple ,
+                            tnr_scores  : tuple ,
                             bins        : int   = 100  ,
                             title       : str   = None ,
                             cls_labels  : tuple = None ,
@@ -19,15 +19,35 @@ def plot_multi_prf_histos ( rec_scores  : tuple ,
   ax.set_xlabel ("Score", fontsize = 12)
   ax.set_ylabel ("Entries", fontsize = 12)
 
-  ax.hist ( rec_scores[0], bins = bins, range = [0,1], histtype = "stepfilled", edgecolor = "darkblue", lw = 1.5, color = "#377eb8", alpha = 0.7, 
-            label = f"[{cls_labels[0]} class] Recall : ${np.mean(rec_scores[0]):.2f} \pm {np.std(rec_scores[0]):.2f}$", zorder = 3 )
-  ax.hist ( prec_scores[0], bins = bins, range = [0,1], histtype = "stepfilled", edgecolor = "darkred", lw = 1.5, color = "#e41a1c", alpha = 0.7, 
-            label = f"[{cls_labels[0]} class] Precision : ${np.mean(prec_scores[0]):.2f} \pm {np.std(prec_scores[0]):.2f}$", zorder = 1 )
+  tpr = tpr_scores[0][~np.isnan(tpr_scores[0])]
+  tpr_10pctl, tpr_32pctl, tpr_mean = _get_scores_to_plot (tpr)
 
-  ax.hist ( rec_scores[1], bins = bins, range = [0,1], histtype = "stepfilled", edgecolor = "purple", lw = 1.5, color = "#984ea3", alpha = 0.7, 
-            label = f"[{cls_labels[1]} class] Recall : ${np.mean(rec_scores[1]):.2f} \pm {np.std(rec_scores[1]):.2f}$", zorder = 2 )
-  ax.hist ( prec_scores[1], bins = bins, range = [0,1], histtype = "stepfilled", edgecolor = "sienna", lw = 1.5, color = "#ff7f00", alpha = 0.7, 
-            label = f"[{cls_labels[1]} class] Precision : ${np.mean(rec_scores[1]):.2f} \pm {np.std(rec_scores[1]):.2f}$", zorder = 0 )
+  tnr = tnr_scores[0][~np.isnan(tnr_scores[0])]
+  tnr_10pctl, tnr_32pctl, tnr_mean = _get_scores_to_plot (tnr)
+
+  ax.hist ( tpr, bins = bins, range = [0,1], histtype = "stepfilled", 
+            edgecolor = "darkblue", lw = 1.5, color = "#377eb8", alpha = 0.7, 
+            label = f"One-vs-all TPR for {cls_labels[0]} : {tpr_mean:.2f} [{tpr_10pctl:.2f}, {tpr_32pctl:.2f}]", 
+            zorder = 3 )
+  ax.hist ( tnr, bins = bins, range = [0,1], histtype = "stepfilled", 
+            edgecolor = "darkred", lw = 1.5, color = "#e41a1c", alpha = 0.7, 
+            label = f"One-vs-all TNR for {cls_labels[0]} : {tnr_mean:.2f} [{tnr_10pctl:.2f}, {tnr_32pctl:.2f}]", 
+            zorder = 1 )
+
+  tpr = tpr_scores[1][~np.isnan(tpr_scores[1])]
+  tpr_10pctl, tpr_32pctl, tpr_mean = _get_scores_to_plot (tpr)
+
+  tnr = tnr_scores[1][~np.isnan(tnr_scores[1])]
+  tnr_10pctl, tnr_32pctl, tnr_mean = _get_scores_to_plot (tnr)
+
+  ax.hist ( tpr, bins = bins, range = [0,1], histtype = "stepfilled", 
+            edgecolor = "purple", lw = 1.5, color = "#984ea3", alpha = 0.7, 
+            label = f"One-vs-all TPR for {cls_labels[1]} : {tpr_mean:.2f} [{tpr_10pctl:.2f}, {tpr_32pctl:.2f}]", 
+            zorder = 2 )
+  ax.hist ( tnr, bins = bins, range = [0,1], histtype = "stepfilled", 
+            edgecolor = "sienna", lw = 1.5, color = "#ff7f00", alpha = 0.7, 
+            label = f"One-vs-all TNR for {cls_labels[1]} : {tnr_mean:.2f} [{tnr_10pctl:.2f}, {tnr_32pctl:.2f}]", 
+            zorder = 0 )
 
   ax.legend (loc = "upper left", fontsize = 12)
 
@@ -45,3 +65,10 @@ def plot_multi_prf_histos ( rec_scores  : tuple ,
   print (f"Figure correctly exported to {filename}")
 
   plt.show()
+
+
+def _get_scores_to_plot (score):
+  pctl_10 = np.percentile ( score, 10, axis = 0 )
+  pctl_32 = np.percentile ( score, 32, axis = 0 )
+  mean = np.mean ( score, axis = 0 )
+  return pctl_10, pctl_32, mean
