@@ -5,7 +5,7 @@ from datetime        import datetime
 from sklearn.metrics import confusion_matrix
 from .custom_predictions import custom_predictions
 
-RESOLUTION = 100
+RESOLUTION = 300
 
 
 def plot_decision_boundary ( y_true    : np.ndarray , 

@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 from sklearn.metrics import precision_recall_curve
 
-RESOLUTION = 100
+RESOLUTION = 300
 
 
 def custom_predictions ( y_true   : np.ndarray ,

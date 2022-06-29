@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 from datetime import datetime
 
-RESOLUTION = 100
+RESOLUTION = 300
 
 
 def plot_conf_matrices ( conf_matrix : np.ndarray    , 
