@@ -1,9 +1,9 @@
 # Lymphoma classification
+[![](https://zenodo.org/badge/387876663.svg)](https://zenodo.org/badge/latestdoi/387876663)
 [![](https://img.shields.io/github/release/mbarbetti/lymphoma-classification.svg)](https://GitHub.com/mbarbetti/lymphoma-classification/releases/)
 [![](https://img.shields.io/github/issues/mbarbetti/lymphoma-classification.svg)](https://github.com/mbarbetti/lymphoma-classification/issues/)
 [![](https://img.shields.io/github/issues-pr/mbarbetti/lymphoma-classification.svg)](https://github.com/mbarbetti/lymphoma-classification/pulls/)
 [![](https://badgen.net/github/stars/mbarbetti/lymphoma-classification)](https://github.com/mbarbetti/lymphoma-classification/stargazers/)
-[![](https://zenodo.org/badge/387876663.svg)](https://zenodo.org/badge/latestdoi/387876663)
 
 ## About
 Classification of bulky mediastinal lymphomas based on radiomic features.
