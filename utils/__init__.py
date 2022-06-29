@@ -7,3 +7,4 @@ from .plot_feat_importance   import plot_feat_importance
 from .plot_decision_boundary import plot_decision_boundary
 from .plot_clf_region        import plot_clf_region
 from .multiclass_predictions import multiclass_predictions
+from .CustomRFECV            import CustomRFECV
