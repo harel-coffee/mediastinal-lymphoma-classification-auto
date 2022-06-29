@@ -1,3 +1,7 @@
+#  Run with:
+#    python model_multi_classifier.py -m log-reg -s 60/40 -t rec90
+
+
 import os
 import pickle
 import numpy as np
@@ -29,12 +33,13 @@ LABELS = ["cHL", "GZL", "PMBCL"]
 #   |   Options setup   |
 #   +-------------------+
 
-MODELS = [ "log-reg", "lin-svm", "gaus-proc", "rnd-frs", "grad-bdt" ]
+MODELS = [ "log-reg", "lin-svm", "gaus-proc", "rnd-frs", "grad-bdt", "suv-max" ]
 
 parser = ArgumentParser ( description = "training script" )
 parser . add_argument ( "-m" , "--model"     , required = True , choices = MODELS )
-parser . add_argument ( "-s" , "--split"     , default  = "50/30/20" )
+parser . add_argument ( "-s" , "--split"     , default  = "60/40" )
 parser . add_argument ( "-t" , "--threshold" , default  = "rec90" )
+parser . add_argument ( "-J" , "--NUM_JOBS"  , default  = 1 )
 args = parser . parse_args()
 
 if len ( args.split.split("/") ) == 2:
@@ -60,6 +65,37 @@ else:
   raise ValueError (f"The rule for custom predictions should be passed as 'recXX' where "
                     f"XX% is the minimum recall score required, or as 'precYY' where YY% "
                     f"is the minimum precision score required.")
+
+NUM_JOBS = int ( args.NUM_JOBS )
+if NUM_JOBS < 1:
+  raise ValueError ("The number of jobs should be greater or equal to 1.")
+
+#   +------------------+
+#   |   Optuna setup   |
+#   +------------------+
+
+def optuna_study ( model_name  : str ,
+                   storage_dir : str ,
+                   objective   : tuple ,
+                   n_trials    : int = 10 ,
+                   directions  : list = [ "minimize" , "minimize" ] , 
+                   load_if_exists : bool = False  ) -> optuna.study.Study:
+  storage_path = "{}/{}.db" . format (storage_dir, model_name)
+  storage_name = "sqlite:///{}" . format (storage_path)  
+
+  if load_if_exists:
+    pass
+  elif not ( load_if_exists ) and os.path.isfile ( storage_path ):
+    os.remove ( storage_path )
+
+  study = optuna.create_study ( study_name = model_name   ,
+                                storage    = storage_name ,
+                                load_if_exists = load_if_exists ,
+                                directions = directions )
+
+  study . optimize ( objective, n_trials = n_trials )
+
+  return study
 
 #   +------------------+
 #   |   Data loading   |
@@ -91,17 +127,18 @@ y_gz = data.query("lymphoma_type == 2")[y_cols] . to_numpy() . flatten()
 #   |   Sub-sample studies   |
 #   +------------------------+
 
-conf_matrices = [ list() , list() , list() ]   # container for confusion matrices
-recalls       = [ list() , list() , list() ]   # container for recalls
-precisions    = [ list() , list() , list() ]   # container for precisions
-roc_curves    = [ list() , list() ]            # container for ROC curve variables
+conf_matrices = [ list() , list() ]   # container for 3x3 confusion matrices
+tprs = [ list() , list() ]            # container for one-vs-all TPRs
+tnrs = [ list() , list() ]            # container for one-vs-all TNRs
+roc_curves = [ list() , list() ]      # container for one-vs-all ROC curve variables
+auc_scores = [ list() , list() ]      # container for one-vs-all AUC score values
 
 ## initial control values
 optimized = False
 append_to_roc = [ True , True ]
 n_roc_points  = [ -1   , -1   ]
 
-for i in tqdm(range(250)):
+for i in tqdm(range(300)):
 
   #   +--------------------------+
   #   |   Train/test splitting   |
@@ -125,40 +162,13 @@ for i in tqdm(range(250)):
   scaler_gz = MinMaxScaler()
   X_gz = scaler_gz.fit_transform (X_gz)
 
-  #   +------------------+
-  #   |   Optuna setup   |
-  #   +------------------+
-
-  def optuna_study ( model_name  : str ,
-                     storage_dir : str ,
-                     objective   : float ,
-                     n_trials    : int = 10 ,
-                     direction   : str = "minimize" , 
-                     load_if_exists : bool = False  ) -> optuna.study.Study:
-    storage_path = "{}/{}.db" . format (storage_dir, model_name)
-    storage_name = "sqlite:///{}" . format (storage_path)  
-
-    if load_if_exists:
-      pass
-    elif not ( load_if_exists ) and os.path.isfile ( storage_path ):
-      os.remove ( storage_path )
-
-    study = optuna.create_study ( study_name = model_name   ,
-                                  storage    = storage_name ,
-                                  load_if_exists = load_if_exists ,
-                                  direction = direction )
-
-    study . optimize ( objective, n_trials = n_trials )
-
-    return study
-
   #   +------------------------------+
   #   |   Hyperparams optimization   |
   #   +------------------------------+
 
   ## LOGISTIC REGRESSION
   if args.model == "log-reg":
-    best_model = LogisticRegression()
+    best_model = LogisticRegression ( n_jobs = NUM_JOBS )
 
   ## LINEAR SVM
   elif args.model == "lin-svm":
@@ -166,7 +176,7 @@ for i in tqdm(range(250)):
 
   ## GAUSSIAN PROCESS
   elif args.model == "gaus-proc":
-    best_model = GaussianProcessClassifier()
+    best_model = GaussianProcessClassifier ( n_jobs = NUM_JOBS )
 
   ## RANDOM FOREST
   elif args.model == "rnd-frs":
@@ -181,29 +191,47 @@ for i in tqdm(range(250)):
       X_trn_res, y_trn_res = sm.fit_resample ( X_trn , y_trn )
 
       ## hyperparams to optimize
-      n_estims  = trial . suggest_int ( "n_estims"  , 5 , 150 , log = True )
-      max_depth = trial . suggest_int ( "max_depth" , 1 , 10  )
+      max_depth        = trial . suggest_int   ( "max_depth"        ,    1 ,  10 )
+      min_samples_leaf = trial . suggest_float ( "min_samples_leaf" , 1e-8 , 0.5 )
 
       ## model to optimize
-      model = RandomForestClassifier ( n_estimators = n_estims   ,
-                                       max_depth = max_depth     )
+      model = RandomForestClassifier ( n_estimators     = 100 ,
+                                       max_depth        = max_depth ,
+                                       min_samples_leaf = min_samples_leaf ,
+                                       max_features     = None ,
+                                       n_jobs           = NUM_JOBS )
 
       model.fit (X_trn_res, y_trn_res)
-      y_scores = model.predict_proba (X_val)
-      return roc_auc_score ( y_val, y_scores[:,1] )   # score to optimize
+
+      ## scores to optimize
+      y_scores_trn = model.predict_proba (X_trn) [:,1]
+      y_scores_val = model.predict_proba (X_val) [:,1]
+
+      auc_trn = roc_auc_score ( y_trn, y_scores_trn )
+      auc_val = roc_auc_score ( y_val, y_scores_val )
+
+      return auc_val , np.abs ( auc_trn - auc_val ) / auc_val   # AUC , over-fitting
 
     if not optimized:
       study = optuna_study ( model_name  = "rnd_forest_clf" ,
-                             storage_dir = "./storage"  ,
-                             objective = objective ,
-                             n_trials  = 50 ,
-                             direction = "maximize" ,
+                             storage_dir = "./storage" ,
+                             objective   = objective ,
+                             n_trials    = 50 ,
+                             directions  = [ "maximize" , "minimize" ] ,
                              load_if_exists = False )
+
+      df = study . trials_dataframe ( attrs = ("params", "values") ) 
+      df = df [ (df["values_0"] > 0.5) & (df["values_0"] < 1.0)  ]
+      df_head = df . sort_values ( by = "values_1", ascending = True ) [:10]
+      print ( df_head )
+
       optimized = True
 
-    best_model = RandomForestClassifier ( n_estimators = study.best_params["n_estims"]  ,
-                                          max_depth    = study.best_params["max_depth"] )
-
+    best_model = RandomForestClassifier ( n_estimators     = 100 ,
+                                          max_depth        = df_head["params_max_depth"].values[0] ,
+                                          min_samples_leaf = df_head["params_min_samples_leaf"].values[0] ,
+                                          max_features     = None ,
+                                          n_jobs           = NUM_JOBS )
 
   ## GRADIENT BDT
   elif args.model == "grad-bdt":
@@ -218,31 +246,52 @@ for i in tqdm(range(250)):
       X_trn_res, y_trn_res = sm.fit_resample ( X_trn , y_trn )
 
       ## hyperparams to optimize
-      learn_rate = trial . suggest_float ( "learn_rate" , 5e-2 , 5e-1 , log = True )
-      n_estims   = trial . suggest_int   ( "n_estims"   , 5    , 150  , log = True )
-      max_depth  = trial . suggest_int   ( "max_depth"  , 1    , 10   )
+      learn_rate       = trial . suggest_float ( "learn_rate"       , 5e-2 , 5e-1 , log = True  )
+      max_depth        = trial . suggest_int   ( "max_depth"        ,    1 ,   10 , log = False )
+      min_samples_leaf = trial . suggest_float ( "min_samples_leaf" , 1e-8 , 5e-1 , log = False )
 
       ## model to optimize
-      model = GradientBoostingClassifier ( learning_rate = learn_rate , 
-                                           n_estimators  = n_estims   , 
-                                           max_depth     = max_depth  )
+      model = GradientBoostingClassifier ( learning_rate    = learn_rate , 
+                                           n_estimators     = 100        , 
+                                           max_depth        = max_depth  ,
+                                           min_samples_leaf = min_samples_leaf ,
+                                           max_features     = None )
 
       model.fit (X_trn_res, y_trn_res)
-      y_scores = model.predict_proba (X_val)
-      return roc_auc_score ( y_val, y_scores[:,1] )   # score to optimize
+      
+      ## scores to optimize
+      y_scores_trn = model.predict_proba (X_trn) [:,1]
+      y_scores_val = model.predict_proba (X_val) [:,1]
+
+      auc_trn = roc_auc_score ( y_trn, y_scores_trn )
+      auc_val = roc_auc_score ( y_val, y_scores_val )
+
+      return auc_val , np.abs ( auc_trn - auc_val ) / auc_val   # AUC , over-fitting
 
     if not optimized:
-      study = optuna_study ( model_name  = "grad_bdt_clf"  ,
+      study = optuna_study ( model_name  = "grad_bdt_clf" ,
                              storage_dir = "./storage" ,
-                             objective = objective ,
-                             n_trials  = 50 ,
-                             direction = "maximize" ,
+                             objective   = objective ,
+                             n_trials    = 50 ,
+                             directions  = [ "maximize" , "minimize" ] ,
                              load_if_exists = False )
+      
+      df = study . trials_dataframe ( attrs = ("params", "values") )
+      df = df [ (df["values_0"] > 0.5) & (df["values_0"] < 1.0)  ]
+      df_head = df . sort_values ( by = "values_1", ascending = True ) [:10]
+      print ( df_head )
+
       optimized = True
 
-    best_model = GradientBoostingClassifier ( learning_rate = study.best_params["learn_rate"] , 
-                                              n_estimators  = study.best_params["n_estims"]   , 
-                                              max_depth     = study.best_params["max_depth"]  )
+    best_model = GradientBoostingClassifier ( learning_rate    = df_head["params_learn_rate"].values[0] , 
+                                              n_estimators     = 100 , 
+                                              max_depth        = df_head["params_max_depth"].values[0]  ,
+                                              min_samples_leaf = df_head["params_min_samples_leaf"].values[0] ,
+                                              max_features     = None )
+
+  ## SUVMAX-BASED CLASSIFIER
+  elif args.model == "suv-max":
+    best_model = None
 
   #   +---------------------------+
   #   |   Multiclass boundaries   |
@@ -267,101 +316,81 @@ for i in tqdm(range(250)):
   #   |   Model performance on train/test set   |
   #   +-----------------------------------------+
 
-  ## train/val splitting
-  sss = StratifiedShuffleSplit ( n_splits = 1, test_size = val_size )
-  for idx_trn, idx_val in sss . split ( X_train, y_train ):
-    X_trn , y_trn = X_train[idx_trn] , y_train[idx_trn]
-    X_val , y_val = X_train[idx_val] , y_train[idx_val] 
+  if best_model is not None:
+    sm = SMOTE()   # oversampling technique
+    X_train_res, y_train_res = sm.fit_resample ( X_train , y_train )
 
-  sm = SMOTE()   # oversampling technique
-  X_trn_res, y_trn_res = sm.fit_resample ( X_trn , y_trn )
+    ## model training
+    best_model . fit (X_train_res, y_train_res)
 
   ## combine the datasets
-  X_trn_comb = np.concatenate ( [ X_trn, X_gz ] )
-  y_trn_comb = np.concatenate ( [ np.where(y_trn, 3, 1), y_gz ] )
-
-  X_val_comb = np.concatenate ( [ X_val, X_gz ] )
-  y_val_comb = np.concatenate ( [ np.where(y_val, 3, 1), y_gz ] )
+  X_train_comb = np.concatenate ( [ X_train, X_gz ] )
+  y_train_comb = np.concatenate ( [ np.where(y_train, 3, 1), y_gz ] )
 
   X_test_comb = np.concatenate ( [ X_test, X_gz ] )
   y_test_comb = np.concatenate ( [ np.where(y_test, 3, 1), y_gz ] )
 
-  X_eval_comb = np.concatenate ( [ X_val, X_test, X_gz ] )
-  y_eval_comb = np.concatenate ( [ np.where(y_val, 3, 1) , np.where(y_test, 3, 1), y_gz ] )
-
-  ## model training
-  best_model . fit (X_trn_res, y_trn_res)
-
   ## model predictions
-  y_scores_trn = best_model.predict_proba ( X_trn )
-  _, threshold = custom_predictions ( y_true = y_trn , 
-                                      y_scores = y_scores_trn , 
-                                      recall_score = rec_score ,
+  y_scores_train = best_model.predict_proba ( X_train ) if (best_model is not None) else np.c_ [ 1 - X_train[:,0] , X_train[:,0] ]
+  _, threshold = custom_predictions ( y_true = y_train , 
+                                      y_scores = y_scores_train , 
+                                      recall_score = rec_score  ,
                                       precision_score = prec_score )   
 
-  y_scores_trn_comb = best_model.predict_proba ( X_trn_comb )
-  y_pred_trn = multiclass_predictions ( y_true = y_trn_comb ,
-                                        y_scores = y_scores_trn_comb ,
-                                        boundaries = get_decision_boundaries ( y_scores_trn, threshold, len(y_gz) / len(y_trn_comb) ) )   # pred for the true train-set
+  y_scores_train_comb = best_model.predict_proba ( X_train_comb ) if (best_model is not None) else np.c_ [ 1 - X_train_comb[:,0] , X_train_comb[:,0] ]
+  y_pred_train = multiclass_predictions ( y_true = y_train_comb ,
+                                          y_scores = y_scores_train_comb ,
+                                          boundaries = get_decision_boundaries ( y_scores_train , 
+                                                                                 threshold , 
+                                                                                 len(y_gz) / len(y_train_comb) ) )   # pred for the true train-set
 
-  y_scores_val_comb = best_model.predict_proba ( X_val_comb )
-  y_pred_val = multiclass_predictions ( y_true = y_val_comb ,
-                                        y_scores = y_scores_val_comb ,
-                                        boundaries = get_decision_boundaries ( y_scores_trn, threshold, len(y_gz) / len(y_trn_comb) ) )   # pred for the val-set
-
-  y_scores_test_comb = best_model.predict_proba ( X_test_comb )
+  y_scores_test_comb = best_model.predict_proba ( X_test_comb ) if (best_model is not None) else np.c_ [ 1 - X_test_comb[:,0] , X_test_comb[:,0] ]
   y_pred_test = multiclass_predictions ( y_true = y_test_comb ,
                                          y_scores = y_scores_test_comb ,
-                                         boundaries = get_decision_boundaries ( y_scores_trn, threshold, len(y_gz) / len(y_trn_comb) ) )   # pred for the test-set
-
-  y_scores_eval_comb = best_model.predict_proba ( X_eval_comb )
-  y_pred_eval = multiclass_predictions ( y_true = y_eval_comb ,
-                                         y_scores = y_scores_eval_comb ,
-                                         boundaries = get_decision_boundaries ( y_scores_trn, threshold, len(y_gz) / len(y_trn_comb) ) )   # pred for the val-set + test-set
+                                         boundaries = get_decision_boundaries ( y_scores_train , 
+                                                                                threshold , 
+                                                                                len(y_gz) / len(y_train_comb) ) )   # pred for the test-set
 
   ## model performances
-  conf_matrix_trn = confusion_matrix ( y_trn_comb, y_pred_trn )
-  recall_2 = conf_matrix_trn[2,2] / np.sum ( conf_matrix_trn[2,:] )
-  recall_1 = conf_matrix_trn[1,1] / np.sum ( conf_matrix_trn[1,:] )
-  precision_2 = conf_matrix_trn[2,2] / np.sum ( conf_matrix_trn[:,2] )
-  precision_1 = conf_matrix_trn[1,1] / np.sum ( conf_matrix_trn[:,1] )
-  conf_matrices[0] . append ( conf_matrix_trn )           # add to the relative container
-  recalls[0]    . append ( [recall_2, recall_1] )         # add to the relative container
-  precisions[0] . append ( [precision_2, precision_1] )   # add to the relative container
+  multi_conf_matrix_train = confusion_matrix ( y_train_comb, y_pred_train )
+  bin_conf_matrix_train_2 = confusion_matrix ( (y_train_comb == 3), (y_scores_train_comb[:,1] >= threshold) )
+  tpr_train_2 = bin_conf_matrix_train_2[1,1] / np.sum ( bin_conf_matrix_train_2[1,:] )
+  tnr_train_2 = bin_conf_matrix_train_2[0,0] / np.sum ( bin_conf_matrix_train_2[0,:] )
+  bin_conf_matrix_train_1 = confusion_matrix ( (y_train_comb == 2), (y_scores_train_comb[:,1] >= threshold) )
+  tpr_train_1 = bin_conf_matrix_train_1[1,1] / np.sum ( bin_conf_matrix_train_1[1,:] )
+  tnr_train_1 = bin_conf_matrix_train_1[0,0] / np.sum ( bin_conf_matrix_train_1[0,:] )
+  conf_matrices[0] . append ( multi_conf_matrix_train )   # add to the relative container
+  tprs[0] . append ( [tpr_train_2, tpr_train_1] )         # add to the relative container
+  tnrs[0] . append ( [tnr_train_2, tnr_train_1] )         # add to the relative container
 
-  conf_matrix_val = confusion_matrix ( y_val_comb, y_pred_val )
-  recall_2 = conf_matrix_val[2,2] / np.sum ( conf_matrix_val[2,:] )
-  recall_1 = conf_matrix_val[1,1] / np.sum ( conf_matrix_val[1,:] )
-  precision_2 = conf_matrix_val[2,2] / np.sum ( conf_matrix_val[:,2] )
-  precision_1 = conf_matrix_val[1,1] / np.sum ( conf_matrix_val[:,1] )
-  conf_matrices[1] . append ( conf_matrix_val )           # add to the relative container
-  recalls[1]    . append ( [recall_2, recall_1] )         # add to the relative container
-  precisions[1] . append ( [precision_2, precision_1] )   # add to the relative container
+  multi_conf_matrix_test = confusion_matrix ( y_test_comb, y_pred_test )
+  bin_conf_matrix_test_2 = confusion_matrix ( (y_test_comb == 3), (y_scores_test_comb[:,1] >= threshold) )
+  tpr_test_2 = bin_conf_matrix_test_2[1,1] / np.sum ( bin_conf_matrix_test_2[1,:] )
+  tnr_test_2 = bin_conf_matrix_test_2[0,0] / np.sum ( bin_conf_matrix_test_2[0,:] )
+  bin_conf_matrix_test_1 = confusion_matrix ( (y_test_comb == 2), (y_scores_test_comb[:,1] >= threshold) )
+  tpr_test_1 = bin_conf_matrix_test_1[1,1] / np.sum ( bin_conf_matrix_test_1[1,:] )
+  tnr_test_1 = bin_conf_matrix_test_1[0,0] / np.sum ( bin_conf_matrix_test_1[0,:] )
+  conf_matrices[1] . append ( multi_conf_matrix_test )   # add to the relative container
+  tprs[1] . append ( [tpr_test_2, tpr_test_1] )          # add to the relative container
+  tnrs[1] . append ( [tnr_test_2, tnr_test_1] )          # add to the relative container
 
-  conf_matrix_test = confusion_matrix ( y_test_comb, y_pred_test )
-  recall_2 = conf_matrix_test[2,2] / np.sum ( conf_matrix_test[2,:] )
-  recall_1 = conf_matrix_test[1,1] / np.sum ( conf_matrix_test[1,:] )
-  precision_2 = conf_matrix_test[2,2] / np.sum ( conf_matrix_test[:,2] )
-  precision_1 = conf_matrix_test[1,1] / np.sum ( conf_matrix_test[:,1] )
-  conf_matrices[2] . append ( conf_matrix_test )          # add to the relative container
-  recalls[2]    . append ( [recall_2, recall_1] )         # add to the relative container
-  precisions[2] . append ( [precision_2, precision_1] )   # add to the relative container
+  auc_test_2 = roc_auc_score ( (y_test_comb == 3), y_scores_test_comb[:,1] )                # one-vs-all AUC score (PMBCL class)
+  fpr_test_2 , tpr_test_2 , _ = roc_curve ( (y_test_comb == 3), y_scores_test_comb[:,1] )   # one-vs-all ROC curve (PMBCL class)
 
-  auc_eval_2 = roc_auc_score ( (y_eval_comb == 3), y_scores_eval_comb[:,1] )                # one-vs-all AUC score (PMBCL class)
-  fpr_eval_2 , tpr_eval_2 , _ = roc_curve ( (y_eval_comb == 3), y_scores_eval_comb[:,1] )   # one-vs-all ROC curve (PMBCL class)
+  if (len(fpr_test_2) == n_roc_points[0]): append_to_roc[0] = True
+  if append_to_roc[0] and (len(fpr_test_2) > 10):
+    roc_curves[0] . append ( np.c_ [1 - fpr_test_2, tpr_test_2] )   # add to the relative container
+    auc_scores[0] . append ( auc_test_2 )                           # add to the relative container
+    append_to_roc[0] = False ; n_roc_points[0] = len(fpr_test_2)
 
-  if (len(fpr_eval_2) == n_roc_points[0]): append_to_roc[0] = True
-  if append_to_roc[0]:
-    roc_curves[0] . append ( np.c_ [1 - fpr_eval_2, tpr_eval_2, auc_eval_2 * np.ones_like(fpr_eval_2)] )   # add to the relative container
-    append_to_roc[0] = False ; n_roc_points[0] = len(fpr_eval_2)
+  auc_test_1 = roc_auc_score ( (y_test_comb == 2), y_scores_test_comb[:,1] )                # one-vs-all AUC score (GZL class)
+  fpr_test_1 , tpr_test_1 , _ = roc_curve ( (y_test_comb == 2), y_scores_test_comb[:,1] )   # one-vs-all ROC curve (GZL class)
 
-  auc_eval_1 = roc_auc_score ( (y_eval_comb == 2), y_scores_eval_comb[:,1] )                # one-vs-all AUC score (GZL class)
-  fpr_eval_1 , tpr_eval_1 , _ = roc_curve ( (y_eval_comb == 2), y_scores_eval_comb[:,1] )   # one-vs-all ROC curve (GZL class)
-
-  if (len(fpr_eval_1) == n_roc_points[1]): append_to_roc[1] = True
-  if append_to_roc[1]:
-    roc_curves[1] . append ( np.c_ [1 - fpr_eval_1, tpr_eval_1, auc_eval_1 * np.ones_like(fpr_eval_1)] )   # add to the relative container
-    append_to_roc[1] = False ; n_roc_points[1] = len(fpr_eval_1)
+  if (len(fpr_test_1) == n_roc_points[1]): append_to_roc[1] = True
+  if append_to_roc[1] and (len(fpr_test_1) > 10):
+    roc_curves[1] . append ( np.c_ [1 - fpr_test_1, tpr_test_1] )   # add to the relative container
+    auc_scores[1] . append ( auc_test_1 )                           # add to the relative container
+    append_to_roc[1] = False ; n_roc_points[1] = len(fpr_test_1)
 
 #   +----------------------+
 #   |   Plots generation   |
@@ -373,6 +402,7 @@ def model_name() -> str:
   elif args.model == "gaus-proc" : return "Gaussian Process classifier"
   elif args.model == "rnd-frs"   : return "Random Forest classifier"
   elif args.model == "grad-bdt"  : return "Gradient BDT classifier"
+  elif args.model == "suv-max"   : return "SUV$_{max}$-based classifier"
 
 plot_conf_matrices ( conf_matrix = np.mean(conf_matrices[0], axis = 0) . astype(np.int32) ,
                      labels = LABELS      ,
@@ -384,32 +414,18 @@ plot_conf_matrices ( conf_matrix = np.mean(conf_matrices[1], axis = 0) . astype(
                      labels = LABELS      ,
                      show_matrix = "both" , 
                      save_figure = True   ,
-                     fig_name = f"multi-clf/{args.model}/{args.model}_{args.threshold}_val" )
-
-plot_conf_matrices ( conf_matrix = np.mean(conf_matrices[2], axis = 0) . astype(np.int32) ,
-                     labels = LABELS      ,
-                     show_matrix = "both" , 
-                     save_figure = True   ,
                      fig_name = f"multi-clf/{args.model}/{args.model}_{args.threshold}_test" )
 
-plot_multi_prf_histos ( rec_scores  = ( np.array(recalls[0])[:,0]    , np.array(recalls[0])[:,1]    ) ,
-                        prec_scores = ( np.array(precisions[0])[:,0] , np.array(precisions[0])[:,1] ) ,
+plot_multi_prf_histos ( tpr_scores = ( np.array(tprs[0])[:,0] , np.array(tprs[0])[:,1]    ) ,
+                        tnr_scores = ( np.array(tnrs[0])[:,0] , np.array(tnrs[0])[:,1] ) ,
                         bins = 25 ,
                         title = f"Performance of multi-class {model_name()} (on train-set)" ,
                         cls_labels = (LABELS[2], LABELS[1]) ,
                         save_figure = True ,
                         fig_name = f"multi-clf/{args.model}/{args.model}_{args.threshold}_train_prf" )
 
-plot_multi_prf_histos ( rec_scores  = ( np.array(recalls[1])[:,0]    , np.array(recalls[1])[:,1]    ) ,
-                        prec_scores = ( np.array(precisions[1])[:,0] , np.array(precisions[1])[:,1] ) ,
-                        bins = 25 ,
-                        title = f"Performance of multi-class {model_name()} (on val-set)" ,
-                        cls_labels = (LABELS[2], LABELS[1]) ,
-                        save_figure = True ,
-                        fig_name = f"multi-clf/{args.model}/{args.model}_{args.threshold}_val_prf" )
-
-plot_multi_prf_histos ( rec_scores  = ( np.array(recalls[2])[:,0]    , np.array(recalls[2])[:,1]    ) ,
-                        prec_scores = ( np.array(precisions[2])[:,0] , np.array(precisions[2])[:,1] ) ,
+plot_multi_prf_histos ( tpr_scores = ( np.array(tprs[1])[:,0] , np.array(tprs[1])[:,1]    ) ,
+                        tnr_scores = ( np.array(tnrs[1])[:,0] , np.array(tnrs[1])[:,1] ) ,
                         bins = 25 ,
                         title = f"Performance of multi-class {model_name()} (on test-set)" ,
                         cls_labels = (LABELS[2], LABELS[1]) ,
@@ -420,12 +436,23 @@ plot_multi_prf_histos ( rec_scores  = ( np.array(recalls[2])[:,0]    , np.array(
 #   |   Scores export   |
 #   +-------------------+
 
-roc_vars_lbl3 = np.c_ [ np.mean(roc_curves[0], axis = 0) , np.std(roc_curves[0], axis = 0)[:,2] ]
-roc_vars_lbl2 = np.c_ [ np.mean(roc_curves[1], axis = 0) , np.std(roc_curves[1], axis = 0)[:,2] ]
+roc_vars_pmbcl = np.mean ( roc_curves[0], axis = 0 )
+auc_vars_pmbcl = np.array ( [ np.percentile ( auc_scores[0], 10, axis = 0 ) , 
+                              np.percentile ( auc_scores[0], 32, axis = 0 ) , 
+                              np.mean ( auc_scores[0], axis = 0 ) ,
+                              np.std  ( auc_scores[0], axis = 0 ) ] )
+
+roc_vars_gzl = np.mean ( roc_curves[1], axis = 0 )
+auc_vars_gzl = np.array ( [ np.percentile ( auc_scores[1], 10, axis = 0 ) , 
+                            np.percentile ( auc_scores[1], 32, axis = 0 ) , 
+                            np.mean ( auc_scores[1], axis = 0 ) ,
+                            np.std  ( auc_scores[1], axis = 0 ) ] )
 
 score_dir  = "scores"
 score_name = f"{args.model}_{args.threshold}"
 
 filename = f"{score_dir}/multi-clf/{score_name}.npz"
-np . savez ( filename, roc_vars_lbl3 = roc_vars_lbl3, roc_vars_lbl2 = roc_vars_lbl2 )
+np . savez ( filename  , 
+             roc_pmbcl = roc_vars_pmbcl , auc_pmbcl = auc_vars_pmbcl , 
+             roc_gzl   = roc_vars_gzl   , auc_gzl   = auc_vars_gzl   )
 print (f"Scores correctly exported to {filename}")
