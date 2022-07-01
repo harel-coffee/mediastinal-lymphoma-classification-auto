@@ -362,54 +362,74 @@ def model_name() -> str:
   elif args.model == "grad-bdt"  : return "Gradient BDT classifier"
   elif args.model == "suv-max"   : return "SUV$_{max}$-based classifier"
 
-plot_conf_matrices ( conf_matrix = np.mean(conf_matrices[0], axis = 0) . astype(np.int32) ,
+feat_names = [ "SUV_max" , "SUV_mean" , "TLG (mL)" , "SUV_skewness" , "SUV_kurtosis" , "GLCM_homogeneity" , 
+               "GLCM_entropy ($\log_{10}$)" , "GLRLM_SRE" , "GLRLM_LRE" , "GLZLM_LGZE" , "GLZLM_HGZE" ]
+
+if feat_ranking:
+
+  if best_model is not None:
+
+    plot_feat_importance ( feat_ranks = np.array (rankings) ,
+                           feat_names = feat_names ,
+                           save_figure = True ,
+                           fig_name = f"bin-clf/{args.model}/{args.model}_{args.threshold}_feat_imp" )
+
+    #   +----------------------------+
+    #   |   Feature ranking export   |
+    #   +----------------------------+
+
+    rnk_dir  = "rankings"
+    rnk_name = f"{args.model}_{args.threshold}"
+
+    filename = f"{rnk_dir}/{rnk_name}.npz"
+    np . savez ( filename, ranks = np.array (rankings), names = feat_names )
+    print (f"Feature rankings correctly exported to {filename}")
+
+  else: 
+
+    print ("Warning! The model selected doesn't allow to study the feature importance.")
+
+else:
+
+  plot_conf_matrices ( conf_matrix = np.mean(conf_matrices[0], axis = 0) . astype(np.int32) ,
                      labels = LABELS      ,
                      show_matrix = "both" , 
                      save_figure = True   ,
                      fig_name = f"bin-clf/{args.model}/{args.model}_{args.threshold}_train" )
 
-plot_conf_matrices ( conf_matrix = np.mean(conf_matrices[1], axis = 0) . astype(np.int32) ,
-                     labels = LABELS      ,
-                     show_matrix = "both" , 
-                     save_figure = True   ,
-                     fig_name = f"bin-clf/{args.model}/{args.model}_{args.threshold}_test" )
+  plot_conf_matrices ( conf_matrix = np.mean(conf_matrices[1], axis = 0) . astype(np.int32) ,
+                       labels = LABELS      ,
+                       show_matrix = "both" , 
+                       save_figure = True   ,
+                       fig_name = f"bin-clf/{args.model}/{args.model}_{args.threshold}_test" )
 
-plot_bin_prf_histos ( tpr_scores = np.array(tprs[0]) ,
-                      tnr_scores = np.array(tnrs[0]) ,
-                      bins = 25 ,
-                      title = f"Performance of {model_name()} (on train-set)" ,
-                      save_figure = True ,
-                      fig_name = f"bin-clf/{args.model}/{args.model}_{args.threshold}_train_prf" )
+  plot_bin_prf_histos ( tpr_scores = np.array(tprs[0]) ,
+                        tnr_scores = np.array(tnrs[0]) ,
+                        bins = 25 ,
+                        title = f"Performance of {model_name()} (on train-set)" ,
+                        save_figure = True ,
+                        fig_name = f"bin-clf/{args.model}/{args.model}_{args.threshold}_train_prf" )
 
-plot_bin_prf_histos ( tpr_scores = np.array(tprs[1]) ,
-                      tnr_scores = np.array(tnrs[1]) ,
-                      bins = 25 ,
-                      title = f"Performance of {model_name()} (on test-set)" ,
-                      save_figure = True ,
-                      fig_name = f"bin-clf/{args.model}/{args.model}_{args.threshold}_test_prf" )
+  plot_bin_prf_histos ( tpr_scores = np.array(tprs[1]) ,
+                        tnr_scores = np.array(tnrs[1]) ,
+                        bins = 25 ,
+                        title = f"Performance of {model_name()} (on test-set)" ,
+                        save_figure = True ,
+                        fig_name = f"bin-clf/{args.model}/{args.model}_{args.threshold}_test_prf" )
 
-if feat_ranking and (best_model is not None):
-  feat_names = [ "SUV_max" , "SUV_mean" , "TLG (mL)" , "SUV_skewness" , "SUV_kurtosis" , "GLCM_homogeneity" , 
-                 "GLCM_entropy ($\log_{10}$)" , "GLRLM_SRE" , "GLRLM_LRE" , "GLZLM_LGZE" , "GLZLM_HGZE" ]
-  
-  plot_feat_importance ( feat_ranks = np.array (rankings) ,
-                         feat_names = feat_names ,
-                         save_figure = True ,
-                         fig_name = f"bin-clf/{args.model}/{args.model}_{args.threshold}_feat_imp" )
+  #   +-------------------+
+  #   |   Scores export   |
+  #   +-------------------+
 
-#   +-------------------+
-#   |   Scores export   |
-#   +-------------------+
+  roc_vars = np.mean ( roc_curves, axis = 0 )
+  auc_vars = np.array ( [ np.percentile ( auc_scores, 10, axis = 0 ) , 
+                          np.percentile ( auc_scores, 32, axis = 0 ) , 
+                          np.mean ( auc_scores, axis = 0 ) ,
+                          np.std  ( auc_scores, axis = 0 ) ] )
 
-roc_vars = np.mean ( roc_curves, axis = 0 )
-auc_vars = np.array ( [ np.percentile ( auc_scores, 10, axis = 0 ) , 
-                        np.percentile ( auc_scores, 32, axis = 0 ) , 
-                        np.mean ( auc_scores, axis = 0 ) ,
-                        np.std  ( auc_scores, axis = 0 ) ] )
+  score_dir  = "scores"
+  score_name = f"{args.model}_{args.threshold}"
 
-score_dir  = "scores"
-score_name = f"{args.model}_{args.threshold}"
-
-filename = f"{score_dir}/bin-clf/{score_name}.npz"
-np . savez ( filename, roc = roc_vars, auc = auc_vars )
-print (f"Scores correctly exported to {filename}")
+  filename = f"{score_dir}/bin-clf/{score_name}.npz"
+  np . savez ( filename, roc = roc_vars, auc = auc_vars )
+  print (f"Scores correctly exported to {filename}")
