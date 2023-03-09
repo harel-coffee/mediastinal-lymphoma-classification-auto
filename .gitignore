@@ -3,17 +3,16 @@ data/*.csv
 data/*.pkl
 
 # Optuna
-storage/*.db 
+scripts/storage/*.db 
 
-# Models
-models/*.pkl
-
-# Scores
-scores/*/*.npz
+# Numpy files
+scripts/scores/*.npz
+scripts/rankings/*.npz
 
 # Images
-docs/img/*/*/*.png
-docs/img/*/*.png
+scripts/img/*/*/*.png
+scripts/img/*/*.png
+docs/img/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
