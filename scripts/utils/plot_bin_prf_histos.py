@@ -1,9 +1,10 @@
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 
 from datetime import datetime
 
-RESOLUTION = 300
+RESOLUTION = 600
 
 
 def plot_bin_prf_histos ( tpr_scores  : np.ndarray   ,
@@ -43,10 +44,14 @@ def plot_bin_prf_histos ( tpr_scores  : np.ndarray   ,
     fig_name = "prf_histos_"
     for time, unit in zip ( timestamp.split(":"), ["h","m","s"] ):
       fig_name += time + unit   # YYYY-MM-DD_HHhMMmSSs
-  filename = f"docs/img/{fig_name}.png"
+  img_dir = "./img"
+  filename = f"{img_dir}/{fig_name}.png"
 
   plt.tight_layout()
-  if save_figure: plt.savefig ( filename, format = "png", dpi = RESOLUTION )
+  if save_figure:
+    if not os.path.exists(img_dir):
+      os.makedirs(img_dir)
+    plt.savefig ( filename, format = "png", dpi = RESOLUTION )
   print (f"Figure correctly exported to {filename}")
 
   plt.show()

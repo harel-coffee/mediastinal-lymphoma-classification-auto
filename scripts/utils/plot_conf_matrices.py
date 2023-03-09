@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -5,7 +6,7 @@ import matplotlib.pyplot as plt
 
 from datetime import datetime
 
-RESOLUTION = 300
+RESOLUTION = 600
 
 
 def plot_conf_matrices ( conf_matrix : np.ndarray    , 
@@ -33,9 +34,12 @@ def plot_conf_matrices ( conf_matrix : np.ndarray    ,
     sns.heatmap ( df_conf_mtx, annot = True, annot_kws = { "size" : 14 }, cmap = "Blues" )
     plt.xlabel ( "Predicted labels", fontsize = 12 )
     plt.ylabel ( "True labels", fontsize = 12)
+    img_dir = "./img"
     filename = f"{fig_name}_conf_matrix" if fig_name else f"conf_matrix_{tmp}"
-    filename = f"docs/img/{filename}.png"
+    filename = f"{img_dir}/{filename}.png"
     if save_figure:
+      if not os.path.exists(img_dir):
+        os.makedirs(img_dir)
       plt.savefig ( filename, format = "png", dpi = RESOLUTION )
       print (f"Figure correctly exported to {filename}")
     plt.show()
@@ -48,9 +52,12 @@ def plot_conf_matrices ( conf_matrix : np.ndarray    ,
     sns.heatmap ( df_norm_conf_mtx, annot = True, annot_kws = { "size" : 14 }, cmap = "Blues" )
     plt.xlabel ( "Predicted labels", fontsize = 12 )
     plt.ylabel ( "True labels", fontsize = 12)
+    img_dir = "./img"
     filename = f"{fig_name}_norm_conf_matrix" if fig_name else f"norm_conf_matrix_{tmp}"
-    filename = f"docs/img/{filename}.png"
+    filename = f"{img_dir}/{filename}.png"
     if save_figure:
+      if not os.path.exists(img_dir):
+        os.makedirs(img_dir)
       plt.savefig ( filename, format = "png", dpi = RESOLUTION )
       print (f"Figure correctly exported to {filename}")
     plt.show()

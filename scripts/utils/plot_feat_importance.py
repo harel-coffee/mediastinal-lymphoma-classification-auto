@@ -1,11 +1,13 @@
+import os
 import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
 from datetime import datetime
+from argparse import ArgumentParser
 
-RESOLUTION = 300
+RESOLUTION = 600
 
 
 def plot_feat_importance ( feat_ranks  : np.ndarray   ,
@@ -41,10 +43,28 @@ def plot_feat_importance ( feat_ranks  : np.ndarray   ,
     fig_name = "feat_importance_"
     for time, unit in zip ( timestamp.split(":"), ["h","m","s"] ):
       fig_name += time + unit   # YYYY-MM-DD_HHhMMmSSs
-  filename = f"docs/img/{fig_name}.png"
+  img_dir = "./img"
+  filename = f"{img_dir}/{fig_name}.png"
 
   plt.tight_layout()
-  if save_figure: plt.savefig ( filename, format = "png", dpi = RESOLUTION )
-  print (f"Figure correctly exported to {filename}")
+  if save_figure:
+    if not os.path.exists(img_dir):
+      os.makedirs(img_dir)
+    plt.savefig ( filename, format = "png", dpi = RESOLUTION )
+    print (f"Figure correctly exported to {filename}")
 
   plt.show()
+
+
+if __name__ == "__main__":
+  parser = ArgumentParser ( description = "feature importance" )
+  parser . add_argument ( "-f" , "--filename" , required = True )
+  args = parser . parse_args()
+
+  npz_file = np.load (args.filename)
+  feat_ranks = npz_file["ranks"]
+  feat_names = npz_file["names"]
+
+  plot_feat_importance ( feat_ranks  = feat_ranks ,
+                         feat_names  = feat_names ,
+                         save_figure = True )
