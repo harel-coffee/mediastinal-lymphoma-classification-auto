@@ -27,7 +27,7 @@ from sklearn.metrics           import roc_auc_score, confusion_matrix, roc_curve
 from utils import custom_predictions, CustomRFECV, plot_conf_matrices, plot_bin_prf_histos, plot_feat_importance
 
 LABELS = ["cHL", "PMBCL"]
-DEBUG  = True
+DEBUG  = False
 
 #   +-------------------+
 #   |   Options setup   |

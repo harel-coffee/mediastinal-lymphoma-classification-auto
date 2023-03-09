@@ -54,8 +54,6 @@ colors = [ "#0571b0", "#ca0020", "#7b3294", "#4dac26", "#e9a3c9", "#fdb863" ]
 
 for label in LABELS:
 
-  print ("\t\t\t\t\t<<< {label} >>>")
-
   fig, ax = plt.subplots (nrows = 1, ncols = 2, figsize = (16,6), dpi = RESOLUTION)
 
   for i in range(2):
@@ -88,7 +86,7 @@ for label in LABELS:
         print ( f"    {label} AUC : {auc_scores[2]:.2f} +/- {auc_scores[3]:.2f}" )
         print ( f"    {label} AUC (10th percentile) : {auc_scores[0]:.2f}" )
         print ( f"    {label} AUC (32nd percentile) : {auc_scores[1]:.2f}" )
-        print ( "  " + "-" * 32 )
+        print ( "  " + "-" * 38 )
         print ( f"    {label} AP : {ap_scores[2]:.2f} +/- {ap_scores[3]:.2f}" )
         print ( f"    {label} AP (10th percentile) : {ap_scores[0]:.2f}" )
         print ( f"    {label} AP (32nd percentile) : {ap_scores[1]:.2f}\n" )
@@ -111,7 +109,7 @@ for label in LABELS:
 
   filename = f"./img/multi-clf/roc_curves_{label.lower()}_{args.threshold}.png"
   plt.savefig ( filename, format = "png", dpi = RESOLUTION )
-  print (f"Figure correctly exported to {filename}")
+  print (f"Figure correctly exported to {filename}\n")
 
   plt.show()
   plt.close()
