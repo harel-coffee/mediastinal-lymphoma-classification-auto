@@ -1,5 +1,5 @@
 #  Run with:
-#    python model_multi_classifier.py -m log-reg -s 60/40 -t rec90
+#    python multiclass_classification.py -m log-reg
 
 
 import os
@@ -15,15 +15,14 @@ optuna.logging.set_verbosity ( optuna.logging.ERROR )   # silence Optuna during 
 import warnings
 warnings.filterwarnings ( "ignore", category = RuntimeWarning )
 
-from sklearn.model_selection   import StratifiedShuffleSplit
+from sklearn.model_selection   import StratifiedShuffleSplit, train_test_split
 from sklearn.preprocessing     import MinMaxScaler
 from imblearn.over_sampling    import SMOTE
 from sklearn.linear_model      import LogisticRegression
 from sklearn.svm               import SVC
 from sklearn.gaussian_process  import GaussianProcessClassifier
 from sklearn.ensemble          import RandomForestClassifier, GradientBoostingClassifier
-from sklearn.feature_selection import RFECV
-from sklearn.metrics           import roc_auc_score, confusion_matrix, roc_curve
+from sklearn.metrics           import roc_auc_score, confusion_matrix, roc_curve, average_precision_score, precision_recall_curve
 
 from utils import custom_predictions, multiclass_predictions, plot_conf_matrices, plot_multi_prf_histos
 
@@ -37,14 +36,14 @@ MODELS = [ "log-reg", "lin-svm", "gaus-proc", "rnd-frs", "grad-bdt", "suv-max" ]
 
 parser = ArgumentParser ( description = "training script" )
 parser . add_argument ( "-m" , "--model"     , required = True , choices = MODELS )
-parser . add_argument ( "-s" , "--split"     , default  = "60/40" )
+parser . add_argument ( "-s" , "--split"     , default  = "60/20/20" )
 parser . add_argument ( "-t" , "--threshold" , default  = "rec90" )
 parser . add_argument ( "-J" , "--NUM_JOBS"  , default  = 1 )
 args = parser . parse_args()
 
 if len ( args.split.split("/") ) == 2:
-  test_size = 0.5 * float(args.split.split("/")[-1]) / 100
-  val_size  = test_size
+  test_size = float(args.split.split("/")[1]) / 100
+  val_size  = 0.5 * float(args.split.split("/")[0]) / 100
   val_size /= ( 1 - test_size )   # w.r.t. new dataset size
 elif len ( args.split.split("/") ) == 3:
   test_size = float(args.split.split("/")[2]) / 100
@@ -55,10 +54,10 @@ else:
                     f"the percentage of data used for training, while YY% and ZZ% are "
                     f"the ones used for validation and testing respectively.")
 
-if "rec" in args.threshold:
+if "rec" == args.threshold[:3]:
   rec_score  = float(args.threshold.split("rec")[-1]) / 100
   prec_score = None
-elif "prec" in args.threshold:
+elif "prec" == args.threshold[:4]:
   rec_score  = None
   prec_score = float(args.threshold.split("prec")[-1]) / 100
 else:
@@ -67,8 +66,7 @@ else:
                     f"is the minimum precision score required.")
 
 NUM_JOBS = int ( args.NUM_JOBS )
-if NUM_JOBS < 1:
-  raise ValueError ("The number of jobs should be greater or equal to 1.")
+assert NUM_JOBS >= 1
 
 #   +------------------+
 #   |   Optuna setup   |
@@ -80,6 +78,9 @@ def optuna_study ( model_name  : str ,
                    n_trials    : int = 10 ,
                    directions  : list = [ "minimize" , "minimize" ] , 
                    load_if_exists : bool = False  ) -> optuna.study.Study:
+  if not os.path.exists(storage_dir):
+    os.makedirs(storage_dir)
+  
   storage_path = "{}/{}.db" . format (storage_dir, model_name)
   storage_name = "sqlite:///{}" . format (storage_path)  
 
@@ -101,7 +102,7 @@ def optuna_study ( model_name  : str ,
 #   |   Data loading   |
 #   +------------------+
 
-data_dir  = "./data"
+data_dir  = "../data"
 data_file = "db_mediastinalbulky_reduced.pkl" 
 file_path = os.path.join ( data_dir, data_file )
 
@@ -131,12 +132,12 @@ conf_matrices = [ list() , list() ]   # container for 3x3 confusion matrices
 tprs = [ list() , list() ]            # container for one-vs-all TPRs
 tnrs = [ list() , list() ]            # container for one-vs-all TNRs
 roc_curves = [ list() , list() ]      # container for one-vs-all ROC curve variables
+pr_curves  = [ list() , list() ]      # container for one-vs-all PR curve variables
 auc_scores = [ list() , list() ]      # container for one-vs-all AUC score values
+ap_scores  = [ list() , list() ]      # container for one-vs-all AP score values
 
 ## initial control values
 optimized = False
-append_to_roc = [ True , True ]
-n_roc_points  = [ -1   , -1   ]
 
 for i in tqdm(range(300)):
 
@@ -182,10 +183,7 @@ for i in tqdm(range(300)):
   elif args.model == "rnd-frs":
     def objective (trial):
       ## train/val splitting
-      sss = StratifiedShuffleSplit ( n_splits = 1, test_size = val_size )
-      for idx_train, idx_val in sss . split ( X_train, y_train ):
-        X_trn , y_trn = X_train[idx_train] , y_train[idx_train]
-        X_val , y_val = X_train[idx_val]   , y_train[idx_val] 
+      X_trn, X_val, y_trn, y_val = train_test_split(X_train, y_train, test_size=val_size)
 
       sm = SMOTE()   # oversampling technique
       X_trn_res, y_trn_res = sm.fit_resample ( X_trn , y_trn )
@@ -221,7 +219,7 @@ for i in tqdm(range(300)):
                              load_if_exists = False )
 
       df = study . trials_dataframe ( attrs = ("params", "values") ) 
-      df = df [ (df["values_0"] > 0.5) & (df["values_0"] < 1.0)  ]
+      df = df [ (df["values_0"] > 0.7) & (df["values_0"] < 1.0) & (df["values_1"] < 0.1) ]
       df_head = df . sort_values ( by = "values_1", ascending = True ) [:10]
       print ( df_head )
 
@@ -237,11 +235,8 @@ for i in tqdm(range(300)):
   elif args.model == "grad-bdt":
     def objective (trial):
       ## train/val splitting
-      sss = StratifiedShuffleSplit ( n_splits = 1, test_size = val_size )
-      for idx_train, idx_val in sss . split ( X_train, y_train ):
-        X_trn , y_trn = X_train[idx_train] , y_train[idx_train]
-        X_val , y_val = X_train[idx_val]   , y_train[idx_val] 
-
+      X_trn, X_val, y_trn, y_val = train_test_split(X_train, y_train, test_size=val_size) 
+      
       sm = SMOTE()   # oversampling technique
       X_trn_res, y_trn_res = sm.fit_resample ( X_trn , y_trn )
 
@@ -277,7 +272,7 @@ for i in tqdm(range(300)):
                              load_if_exists = False )
       
       df = study . trials_dataframe ( attrs = ("params", "values") )
-      df = df [ (df["values_0"] > 0.5) & (df["values_0"] < 1.0)  ]
+      df = df [ (df["values_0"] > 0.7) & (df["values_0"] < 1.0) & (df["values_1"] < 0.1)  ]
       df_head = df . sort_values ( by = "values_1", ascending = True ) [:10]
       print ( df_head )
 
@@ -354,47 +349,61 @@ for i in tqdm(range(300)):
   ## model performances
   multi_conf_matrix_train = confusion_matrix ( y_train_comb, y_pred_train )
   bin_conf_matrix_train_2 = confusion_matrix ( (y_train_comb == 3), (y_scores_train_comb[:,1] >= threshold) )
-  tpr_train_2 = bin_conf_matrix_train_2[1,1] / np.sum ( bin_conf_matrix_train_2[1,:] )
-  tnr_train_2 = bin_conf_matrix_train_2[0,0] / np.sum ( bin_conf_matrix_train_2[0,:] )
+  single_tpr_train_2 = bin_conf_matrix_train_2[1,1] / np.sum ( bin_conf_matrix_train_2[1,:] )
+  single_tnr_train_2 = bin_conf_matrix_train_2[0,0] / np.sum ( bin_conf_matrix_train_2[0,:] )
   bin_conf_matrix_train_1 = confusion_matrix ( (y_train_comb == 2), (y_scores_train_comb[:,1] >= threshold) )
   tpr_train_1 = bin_conf_matrix_train_1[1,1] / np.sum ( bin_conf_matrix_train_1[1,:] )
   tnr_train_1 = bin_conf_matrix_train_1[0,0] / np.sum ( bin_conf_matrix_train_1[0,:] )
   conf_matrices[0] . append ( multi_conf_matrix_train )   # add to the relative container
-  tprs[0] . append ( [tpr_train_2, tpr_train_1] )         # add to the relative container
-  tnrs[0] . append ( [tnr_train_2, tnr_train_1] )         # add to the relative container
+  tprs[0] . append ( [single_tpr_train_2, tpr_train_1] )         # add to the relative container
+  tnrs[0] . append ( [single_tnr_train_2, tnr_train_1] )         # add to the relative container
 
   multi_conf_matrix_test = confusion_matrix ( y_test_comb, y_pred_test )
   bin_conf_matrix_test_2 = confusion_matrix ( (y_test_comb == 3), (y_scores_test_comb[:,1] >= threshold) )
-  tpr_test_2 = bin_conf_matrix_test_2[1,1] / np.sum ( bin_conf_matrix_test_2[1,:] )
-  tnr_test_2 = bin_conf_matrix_test_2[0,0] / np.sum ( bin_conf_matrix_test_2[0,:] )
+  single_tpr_test_2 = bin_conf_matrix_test_2[1,1] / np.sum ( bin_conf_matrix_test_2[1,:] )
+  single_tnr_test_2 = bin_conf_matrix_test_2[0,0] / np.sum ( bin_conf_matrix_test_2[0,:] )
   bin_conf_matrix_test_1 = confusion_matrix ( (y_test_comb == 2), (y_scores_test_comb[:,1] >= threshold) )
   tpr_test_1 = bin_conf_matrix_test_1[1,1] / np.sum ( bin_conf_matrix_test_1[1,:] )
   tnr_test_1 = bin_conf_matrix_test_1[0,0] / np.sum ( bin_conf_matrix_test_1[0,:] )
   conf_matrices[1] . append ( multi_conf_matrix_test )   # add to the relative container
-  tprs[1] . append ( [tpr_test_2, tpr_test_1] )          # add to the relative container
-  tnrs[1] . append ( [tnr_test_2, tnr_test_1] )          # add to the relative container
+  tprs[1] . append ( [single_tpr_test_2, tpr_test_1] )          # add to the relative container
+  tnrs[1] . append ( [single_tnr_test_2, tnr_test_1] )          # add to the relative container
 
   auc_test_2 = roc_auc_score ( (y_test_comb == 3), y_scores_test_comb[:,1] )                # one-vs-all AUC score (PMBCL class)
   fpr_test_2 , tpr_test_2 , _ = roc_curve ( (y_test_comb == 3), y_scores_test_comb[:,1] )   # one-vs-all ROC curve (PMBCL class)
 
-  if (len(fpr_test_2) == n_roc_points[0]): append_to_roc[0] = True
-  if append_to_roc[0] and (len(fpr_test_2) > 10):
+  if len(fpr_test_2) > 10:
     roc_curves[0] . append ( np.c_ [1 - fpr_test_2, tpr_test_2] )   # add to the relative container
     auc_scores[0] . append ( auc_test_2 )                           # add to the relative container
-    append_to_roc[0] = False ; n_roc_points[0] = len(fpr_test_2)
 
   auc_test_1 = roc_auc_score ( (y_test_comb == 2), y_scores_test_comb[:,1] )                # one-vs-all AUC score (GZL class)
   fpr_test_1 , tpr_test_1 , _ = roc_curve ( (y_test_comb == 2), y_scores_test_comb[:,1] )   # one-vs-all ROC curve (GZL class)
 
-  if (len(fpr_test_1) == n_roc_points[1]): append_to_roc[1] = True
-  if append_to_roc[1] and (len(fpr_test_1) > 10):
+  if len(fpr_test_1) > 10:
     roc_curves[1] . append ( np.c_ [1 - fpr_test_1, tpr_test_1] )   # add to the relative container
     auc_scores[1] . append ( auc_test_1 )                           # add to the relative container
-    append_to_roc[1] = False ; n_roc_points[1] = len(fpr_test_1)
+
+  ap_test_2 = average_precision_score ( (y_test_comb == 3), y_scores_test_comb[:,1] )           # one-vs-all AP score (PMBCL class)
+  prec_2 , rec_2 , _ = precision_recall_curve ( (y_test_comb == 3), y_scores_test_comb[:,1] )   # one-vs-all PR curve (PMBCL class)
+
+  if len(prec_2) > 10:
+    pr_curves[0] . append ( np.c_ [rec_2, prec_2] )   # add to the relative container
+    ap_scores[0] . append ( ap_test_2 )               # add to the relative container
+
+  ap_test_1 = average_precision_score ( (y_test_comb == 2), y_scores_test_comb[:,1] )           # one-vs-all AP score (GZL class)
+  prec_1 , rec_1 , _ = precision_recall_curve ( (y_test_comb == 2), y_scores_test_comb[:,1] )   # one-vs-all PR curve (GZL class)
+
+  if len(prec_1) > 10:
+    pr_curves[1] . append ( np.c_ [rec_1, prec_1] )   # add to the relative container
+    ap_scores[1] . append ( ap_test_1 )               # add to the relative container
 
 #   +----------------------+
 #   |   Plots generation   |
 #   +----------------------+
+
+img_dir = f"multi-clf/{args.model}"
+if not os.path.exists(f"./img/{img_dir}"):
+  os.makedirs(f"./img/{img_dir}")
 
 def model_name() -> str:
   if   args.model == "log-reg"   : return "Logistic Regression"
@@ -408,13 +417,13 @@ plot_conf_matrices ( conf_matrix = np.mean(conf_matrices[0], axis = 0) . astype(
                      labels = LABELS      ,
                      show_matrix = "both" , 
                      save_figure = True   ,
-                     fig_name = f"multi-clf/{args.model}/{args.model}_{args.threshold}_train" )
+                     fig_name = f"{img_dir}/{args.model}_{args.threshold}_train" )
 
 plot_conf_matrices ( conf_matrix = np.mean(conf_matrices[1], axis = 0) . astype(np.int32) ,
                      labels = LABELS      ,
                      show_matrix = "both" , 
                      save_figure = True   ,
-                     fig_name = f"multi-clf/{args.model}/{args.model}_{args.threshold}_test" )
+                     fig_name = f"{img_dir}/{args.model}_{args.threshold}_test" )
 
 plot_multi_prf_histos ( tpr_scores = ( np.array(tprs[0])[:,0] , np.array(tprs[0])[:,1]    ) ,
                         tnr_scores = ( np.array(tnrs[0])[:,0] , np.array(tnrs[0])[:,1] ) ,
@@ -422,7 +431,7 @@ plot_multi_prf_histos ( tpr_scores = ( np.array(tprs[0])[:,0] , np.array(tprs[0]
                         title = f"Performance of multi-class {model_name()} (on train-set)" ,
                         cls_labels = (LABELS[2], LABELS[1]) ,
                         save_figure = True ,
-                        fig_name = f"multi-clf/{args.model}/{args.model}_{args.threshold}_train_prf" )
+                        fig_name = f"{img_dir}/{args.model}_{args.threshold}_train_prf" )
 
 plot_multi_prf_histos ( tpr_scores = ( np.array(tprs[1])[:,0] , np.array(tprs[1])[:,1]    ) ,
                         tnr_scores = ( np.array(tnrs[1])[:,0] , np.array(tnrs[1])[:,1] ) ,
@@ -430,11 +439,40 @@ plot_multi_prf_histos ( tpr_scores = ( np.array(tprs[1])[:,0] , np.array(tprs[1]
                         title = f"Performance of multi-class {model_name()} (on test-set)" ,
                         cls_labels = (LABELS[2], LABELS[1]) ,
                         save_figure = True ,
-                        fig_name = f"multi-clf/{args.model}/{args.model}_{args.threshold}_test_prf" )
+                        fig_name = f"{img_dir}/{args.model}_{args.threshold}_test_prf" )
+
+#   +-------------------------+
+#   |   Length mismatch fix   |
+#   +-------------------------+
+
+for curves in roc_curves + pr_curves:
+  curves_max_length = np.max([c.shape[0] for c in curves])
+  for i in range(len(curves)):
+    curves_length = curves[i].shape[0]
+    if curves_length != curves_max_length:
+      if (curves_max_length - curves_length) % 2 == 0:
+        multiples = int((curves_max_length - curves_length)/2)
+        opener = np.tile(curves[i][0,:], (multiples, 1))
+        closer = np.tile(curves[i][-1,:], (multiples,1))
+        curves[i] = np.vstack((opener, curves[i], closer))
+      else:
+        multiples = int((curves_max_length - curves_length)/2)
+        if multiples != 0:
+          opener = np.tile(curves[i][0,:], (multiples+1, 1))
+          closer = np.tile(curves[i][-1,:], (multiples,1))
+          curves[i] = np.vstack((opener, curves[i], closer))
+        else:
+          curves[i] = np.vstack((curves[i][0,:], curves[i]))
 
 #   +-------------------+
 #   |   Scores export   |
 #   +-------------------+
+
+pmbcl_patients = (y_test_comb == 3)
+baseline_pmbcl = len(pmbcl_patients[pmbcl_patients==1]) / len(pmbcl_patients)
+
+gzl_patients = (y_test_comb == 2)
+baseline_gzl = len(gzl_patients[gzl_patients==1]) / len(gzl_patients)
 
 roc_vars_pmbcl = np.mean ( roc_curves[0], axis = 0 )
 auc_vars_pmbcl = np.array ( [ np.percentile ( auc_scores[0], 10, axis = 0 ) , 
@@ -448,11 +486,26 @@ auc_vars_gzl = np.array ( [ np.percentile ( auc_scores[1], 10, axis = 0 ) ,
                             np.mean ( auc_scores[1], axis = 0 ) ,
                             np.std  ( auc_scores[1], axis = 0 ) ] )
 
-score_dir  = "scores"
-score_name = f"{args.model}_{args.threshold}"
+pr_vars_pmbcl = np.mean ( pr_curves[0], axis = 0 )
+ap_vars_pmbcl = np.array ( [ np.percentile ( ap_scores[0], 10, axis = 0 ) , 
+                             np.percentile ( ap_scores[0], 32, axis = 0 ) , 
+                             np.mean ( ap_scores[0], axis = 0 ) ,
+                             np.std  ( ap_scores[0], axis = 0 ) ] )
 
-filename = f"{score_dir}/multi-clf/{score_name}.npz"
+pr_vars_gzl = np.mean ( pr_curves[1], axis = 0 )
+ap_vars_gzl = np.array ( [ np.percentile ( ap_scores[1], 10, axis = 0 ) , 
+                           np.percentile ( ap_scores[1], 32, axis = 0 ) , 
+                           np.mean ( ap_scores[1], axis = 0 ) ,
+                           np.std  ( ap_scores[1], axis = 0 ) ] )
+
+score_dir  = "scores"
+if not os.path.exists(score_dir):
+      os.makedirs(score_dir)
+filename = f"{score_dir}/multi-clf_{args.model}_{args.threshold}.npz"
 np . savez ( filename  , 
+             baseline_pmbcl = baseline_pmbcl , baseline_gzl = baseline_gzl ,
              roc_pmbcl = roc_vars_pmbcl , auc_pmbcl = auc_vars_pmbcl , 
-             roc_gzl   = roc_vars_gzl   , auc_gzl   = auc_vars_gzl   )
+             roc_gzl   = roc_vars_gzl   , auc_gzl   = auc_vars_gzl   ,
+             pr_pmbcl = pr_vars_pmbcl , ap_pmbcl = ap_vars_pmbcl , 
+             pr_gzl   = pr_vars_gzl   , ap_gzl   = ap_vars_gzl   )
 print (f"Scores correctly exported to {filename}")
