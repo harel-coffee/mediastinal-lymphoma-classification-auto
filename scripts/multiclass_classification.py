@@ -131,6 +131,7 @@ y_gz = data.query("lymphoma_type == 2")[y_cols] . to_numpy() . flatten()
 conf_matrices = [ list() , list() ]   # container for 3x3 confusion matrices
 tprs = [ list() , list() ]            # container for one-vs-all TPRs
 tnrs = [ list() , list() ]            # container for one-vs-all TNRs
+ppvs = [ list() , list() ]            # container for one-vs-all PPVs
 roc_curves = [ list() , list() ]      # container for one-vs-all ROC curve variables
 pr_curves  = [ list() , list() ]      # container for one-vs-all PR curve variables
 auc_scores = [ list() , list() ]      # container for one-vs-all AUC score values
@@ -351,23 +352,29 @@ for i in tqdm(range(300)):
   bin_conf_matrix_train_2 = confusion_matrix ( (y_train_comb == 3), (y_scores_train_comb[:,1] >= threshold) )
   single_tpr_train_2 = bin_conf_matrix_train_2[1,1] / np.sum ( bin_conf_matrix_train_2[1,:] )
   single_tnr_train_2 = bin_conf_matrix_train_2[0,0] / np.sum ( bin_conf_matrix_train_2[0,:] )
+  single_ppv_train_2 = bin_conf_matrix_train_2[1,1] / np.sum ( bin_conf_matrix_train_2[:,1] )
   bin_conf_matrix_train_1 = confusion_matrix ( (y_train_comb == 2), (y_scores_train_comb[:,1] >= threshold) )
-  tpr_train_1 = bin_conf_matrix_train_1[1,1] / np.sum ( bin_conf_matrix_train_1[1,:] )
-  tnr_train_1 = bin_conf_matrix_train_1[0,0] / np.sum ( bin_conf_matrix_train_1[0,:] )
-  conf_matrices[0] . append ( multi_conf_matrix_train )   # add to the relative container
-  tprs[0] . append ( [single_tpr_train_2, tpr_train_1] )         # add to the relative container
-  tnrs[0] . append ( [single_tnr_train_2, tnr_train_1] )         # add to the relative container
+  single_tpr_train_1 = bin_conf_matrix_train_1[1,1] / np.sum ( bin_conf_matrix_train_1[1,:] )
+  single_tnr_train_1 = bin_conf_matrix_train_1[0,0] / np.sum ( bin_conf_matrix_train_1[0,:] )
+  single_ppv_train_1 = bin_conf_matrix_train_1[1,1] / np.sum ( bin_conf_matrix_train_1[:,1] )
+  conf_matrices[0] . append ( multi_conf_matrix_train )           # add to the relative container
+  tprs[0] . append ( [single_tpr_train_2, single_tpr_train_1] )   # add to the relative container
+  tnrs[0] . append ( [single_tnr_train_2, single_tnr_train_1] )   # add to the relative container
+  ppvs[0] . append ( [single_ppv_train_2, single_ppv_train_1] )   # add to the relative container
 
   multi_conf_matrix_test = confusion_matrix ( y_test_comb, y_pred_test )
   bin_conf_matrix_test_2 = confusion_matrix ( (y_test_comb == 3), (y_scores_test_comb[:,1] >= threshold) )
   single_tpr_test_2 = bin_conf_matrix_test_2[1,1] / np.sum ( bin_conf_matrix_test_2[1,:] )
   single_tnr_test_2 = bin_conf_matrix_test_2[0,0] / np.sum ( bin_conf_matrix_test_2[0,:] )
+  single_ppv_test_2 = bin_conf_matrix_test_2[1,1] / np.sum ( bin_conf_matrix_test_2[:,1] )
   bin_conf_matrix_test_1 = confusion_matrix ( (y_test_comb == 2), (y_scores_test_comb[:,1] >= threshold) )
-  tpr_test_1 = bin_conf_matrix_test_1[1,1] / np.sum ( bin_conf_matrix_test_1[1,:] )
-  tnr_test_1 = bin_conf_matrix_test_1[0,0] / np.sum ( bin_conf_matrix_test_1[0,:] )
-  conf_matrices[1] . append ( multi_conf_matrix_test )   # add to the relative container
-  tprs[1] . append ( [single_tpr_test_2, tpr_test_1] )          # add to the relative container
-  tnrs[1] . append ( [single_tnr_test_2, tnr_test_1] )          # add to the relative container
+  single_tpr_test_1 = bin_conf_matrix_test_1[1,1] / np.sum ( bin_conf_matrix_test_1[1,:] )
+  single_tnr_test_1 = bin_conf_matrix_test_1[0,0] / np.sum ( bin_conf_matrix_test_1[0,:] )
+  single_ppv_test_1 = bin_conf_matrix_test_1[1,1] / np.sum ( bin_conf_matrix_test_1[:,1] )
+  conf_matrices[1] . append ( multi_conf_matrix_test )          # add to the relative container
+  tprs[1] . append ( [single_tpr_test_2, single_tpr_test_1] )   # add to the relative container
+  tnrs[1] . append ( [single_tnr_test_2, single_tnr_test_1] )   # add to the relative container
+  ppvs[1] . append ( [single_ppv_test_2, single_ppv_test_1] )   # add to the relative container
 
   auc_test_2 = roc_auc_score ( (y_test_comb == 3), y_scores_test_comb[:,1] )                # one-vs-all AUC score (PMBCL class)
   fpr_test_2 , tpr_test_2 , _ = roc_curve ( (y_test_comb == 3), y_scores_test_comb[:,1] )   # one-vs-all ROC curve (PMBCL class)
@@ -425,16 +432,18 @@ plot_conf_matrices ( conf_matrix = np.mean(conf_matrices[1], axis = 0) . astype(
                      save_figure = True   ,
                      fig_name = f"{img_dir}/{args.model}_{args.threshold}_test" )
 
-plot_multi_prf_histos ( tpr_scores = ( np.array(tprs[0])[:,0] , np.array(tprs[0])[:,1]    ) ,
+plot_multi_prf_histos ( tpr_scores = ( np.array(tprs[0])[:,0] , np.array(tprs[0])[:,1] ) ,
                         tnr_scores = ( np.array(tnrs[0])[:,0] , np.array(tnrs[0])[:,1] ) ,
+                        ppv_scores = ( np.array(ppvs[0])[:,0] , np.array(ppvs[0])[:,1] ) ,
                         bins = 25 ,
                         title = f"Performance of multi-class {model_name()} (on train-set)" ,
                         cls_labels = (LABELS[2], LABELS[1]) ,
                         save_figure = True ,
                         fig_name = f"{img_dir}/{args.model}_{args.threshold}_train_prf" )
 
-plot_multi_prf_histos ( tpr_scores = ( np.array(tprs[1])[:,0] , np.array(tprs[1])[:,1]    ) ,
+plot_multi_prf_histos ( tpr_scores = ( np.array(tprs[1])[:,0] , np.array(tprs[1])[:,1] ) ,
                         tnr_scores = ( np.array(tnrs[1])[:,0] , np.array(tnrs[1])[:,1] ) ,
+                        ppv_scores = ( np.array(ppvs[1])[:,0] , np.array(ppvs[1])[:,1] ) ,
                         bins = 25 ,
                         title = f"Performance of multi-class {model_name()} (on test-set)" ,
                         cls_labels = (LABELS[2], LABELS[1]) ,

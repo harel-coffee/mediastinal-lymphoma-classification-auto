@@ -9,6 +9,7 @@ RESOLUTION = 600
 
 def plot_multi_prf_histos ( tpr_scores  : tuple ,
                             tnr_scores  : tuple ,
+                            ppv_scores  : tuple ,
                             bins        : int   = 100  ,
                             title       : str   = None ,
                             cls_labels  : tuple = None ,
@@ -26,6 +27,9 @@ def plot_multi_prf_histos ( tpr_scores  : tuple ,
   tnr = tnr_scores[0][~np.isnan(tnr_scores[0])]
   tnr_10pctl, tnr_32pctl, tnr_mean = _get_scores_to_plot (tnr)
 
+  ppv = ppv_scores[0][~np.isnan(ppv_scores[0])]
+  ppv_10pctl, ppv_32pctl, ppv_mean = _get_scores_to_plot (ppv)
+
   ax.hist ( tpr, bins = bins, range = [0,1], histtype = "stepfilled", 
             edgecolor = "darkblue", lw = 1.5, color = "#377eb8", alpha = 0.7, 
             label = f"One-vs-all TPR for {cls_labels[0]} : {tpr_mean:.2f} [{tpr_10pctl:.2f}, {tpr_32pctl:.2f}]", 
@@ -34,12 +38,19 @@ def plot_multi_prf_histos ( tpr_scores  : tuple ,
             edgecolor = "darkred", lw = 1.5, color = "#e41a1c", alpha = 0.7, 
             label = f"One-vs-all TNR for {cls_labels[0]} : {tnr_mean:.2f} [{tnr_10pctl:.2f}, {tnr_32pctl:.2f}]", 
             zorder = 1 )
+  ax.hist ( ppv, bins = bins, range = [0,1], histtype = "stepfilled", 
+            edgecolor = "darkgreen", lw = 1.5, color = "#1a9850", alpha = 0.7, 
+            label = f"One-vs-all PPV for {cls_labels[0]} : {ppv_mean:.2f} [{ppv_10pctl:.2f}, {ppv_32pctl:.2f}]", 
+            zorder = 1 )
 
   tpr = tpr_scores[1][~np.isnan(tpr_scores[1])]
   tpr_10pctl, tpr_32pctl, tpr_mean = _get_scores_to_plot (tpr)
 
   tnr = tnr_scores[1][~np.isnan(tnr_scores[1])]
   tnr_10pctl, tnr_32pctl, tnr_mean = _get_scores_to_plot (tnr)
+
+  ppv = ppv_scores[1][~np.isnan(ppv_scores[1])]
+  ppv_10pctl, ppv_32pctl, ppv_mean = _get_scores_to_plot (ppv)
 
   ax.hist ( tpr, bins = bins, range = [0,1], histtype = "stepfilled", 
             edgecolor = "purple", lw = 1.5, color = "#984ea3", alpha = 0.7, 
@@ -49,6 +60,10 @@ def plot_multi_prf_histos ( tpr_scores  : tuple ,
             edgecolor = "sienna", lw = 1.5, color = "#ff7f00", alpha = 0.7, 
             label = f"One-vs-all TNR for {cls_labels[1]} : {tnr_mean:.2f} [{tnr_10pctl:.2f}, {tnr_32pctl:.2f}]", 
             zorder = 0 )
+  ax.hist ( ppv, bins = bins, range = [0,1], histtype = "stepfilled", 
+            edgecolor = "black", lw = 1.5, color = "#bababa", alpha = 0.7, 
+            label = f"One-vs-all PPV for {cls_labels[1]} : {ppv_mean:.2f} [{ppv_10pctl:.2f}, {ppv_32pctl:.2f}]", 
+            zorder = 1 )
 
   ax.legend (loc = "upper left", fontsize = 12)
 

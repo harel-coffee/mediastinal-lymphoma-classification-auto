@@ -140,6 +140,7 @@ y  = ( y == 3 )   # PMBCL/cHL classification
 conf_matrices = [ list() , list() ]   # container for confusion matrices
 tprs = [ list() , list() ]            # container for TPRs
 tnrs = [ list() , list() ]            # container for TNRs
+ppvs = [ list() , list() ]            # container for PPVs
 roc_curves = list()                   # container for ROC curve variables
 pr_curves  = list()                   # container for PR curve variables
 auc_scores = list()                   # container for AUC score values
@@ -319,16 +320,20 @@ for i in tqdm(range(NUM_LOOPS)):
   conf_matrix_train = confusion_matrix ( y_train, y_pred_train )
   single_tpr_train = conf_matrix_train[1,1] / np.sum ( conf_matrix_train[1,:] )
   single_tnr_train = conf_matrix_train[0,0] / np.sum ( conf_matrix_train[0,:] )
+  single_ppv_train = conf_matrix_train[1,1] / np.sum ( conf_matrix_train[:,1] )
   conf_matrices[0] . append (conf_matrix_train)   # add to the relative container
   tprs[0] . append (single_tpr_train)             # add to the relative container
   tnrs[0] . append (single_tnr_train)             # add to the relative container
+  ppvs[0] . append (single_ppv_train)             # add to the relative container
 
   conf_matrix_test = confusion_matrix ( y_test, y_pred_test )
   single_tpr_test = conf_matrix_test[1,1] / np.sum ( conf_matrix_test[1,:] )
   single_tnr_test = conf_matrix_test[0,0] / np.sum ( conf_matrix_test[0,:] )
+  single_ppv_test = conf_matrix_test[1,1] / np.sum ( conf_matrix_train[:,1] )
   conf_matrices[1] . append (conf_matrix_test)   # add to the relative container
   tprs[1] . append (single_tpr_test)             # add to the relative container
   tnrs[1] . append (single_tnr_test)             # add to the relative container
+  ppvs[1] . append (single_ppv_test)             # add to the relative container
 
   auc_test = roc_auc_score ( y_test, y_scores_test[:,1] )
   fpr_test , tpr_test , _ = roc_curve ( y_test, y_scores_test[:,1] )
@@ -409,6 +414,7 @@ else:
 
   plot_bin_prf_histos ( tpr_scores = np.array(tprs[0]) ,
                         tnr_scores = np.array(tnrs[0]) ,
+                        ppv_scores = np.array(ppvs[0]) ,
                         bins = 25 ,
                         title = f"Performance of {model_name()} (on train-set)" ,
                         save_figure = True ,
@@ -416,6 +422,7 @@ else:
 
   plot_bin_prf_histos ( tpr_scores = np.array(tprs[1]) ,
                         tnr_scores = np.array(tnrs[1]) ,
+                        ppv_scores = np.array(ppvs[1]) ,
                         bins = 25 ,
                         title = f"Performance of {model_name()} (on test-set)" ,
                         save_figure = True ,

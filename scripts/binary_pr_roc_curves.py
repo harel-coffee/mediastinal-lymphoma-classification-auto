@@ -99,7 +99,7 @@ for i in range(2):
                   label = f"[AP : ${ap_scores[2]:.2f} \pm {ap_scores[3]:.2f}$] {model_name}",
                   zorder = z)
 
-  ax[i].legend (fontsize = 10)
+  ax[i].legend (loc = "lower left", fontsize = 10)
 
 #   +---------------------+
 #   |   Save the figure   |

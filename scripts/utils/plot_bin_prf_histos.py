@@ -9,6 +9,7 @@ RESOLUTION = 600
 
 def plot_bin_prf_histos ( tpr_scores  : np.ndarray   ,
                           tnr_scores  : np.ndarray   ,
+                          ppv_scores  : np.ndarray   ,
                           bins        : int  = 100   ,
                           title       : str  = None  ,
                           save_figure : bool = False ,
@@ -34,6 +35,14 @@ def plot_bin_prf_histos ( tpr_scores  : np.ndarray   ,
             edgecolor = "darkred", lw = 1.5, color = "#d73027", alpha = 0.7, 
             label = f"TNR : {tnr_mean:.2f} [{tnr_10pctl:.2f}, {tnr_32pctl:.2f}]", 
             zorder = 0 )
+  
+  ppv = ppv_scores[~np.isnan(ppv_scores)]
+  ppv_10pctl, ppv_32pctl, ppv_mean = _get_scores_to_plot (ppv)
+  
+  ax.hist ( ppv, bins = bins, range = [0,1], histtype = "stepfilled", 
+            edgecolor = "darkblue", lw = 1.5, color = "#377eb8", alpha = 0.7, 
+            label = f"PPV : {ppv_mean:.2f} [{ppv_10pctl:.2f}, {ppv_32pctl:.2f}]", 
+            zorder = 0 )
 
   ax.legend (loc = "upper left", fontsize = 12)
 
@@ -58,7 +67,7 @@ def plot_bin_prf_histos ( tpr_scores  : np.ndarray   ,
 
 
 def _get_scores_to_plot (score):
-  pctl_10 = np.percentile ( score, 10, axis = 0 )
-  pctl_32 = np.percentile ( score, 32, axis = 0 )
-  mean = np.mean ( score, axis = 0 )
+  pctl_10 = np.percentile ( score, 10 )
+  pctl_32 = np.percentile ( score, 32 )
+  mean = np.mean ( score )
   return pctl_10, pctl_32, mean
