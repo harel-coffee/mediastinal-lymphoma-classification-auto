@@ -9,9 +9,17 @@ This repository contains a set of Jupyter notebooks and Python scripts to reprod
 **Keywords:** [bulky lymphoma](https://www.mdpi.com/search?q=bulky+lymphoma); [diagnosis](https://www.mdpi.com/search?q=diagnosis); [textural analysis](https://www.mdpi.com/search?q=textural+analysis); [machine learning](https://www.mdpi.com/search?q=machine+learning); [FDG-PET](https://www.mdpi.com/search?q=FDG-PET); [radiomics](https://www.mdpi.com/search?q=radiomics); [precision medicine](https://www.mdpi.com/search?q=precision+medicine); [personalized treatment](https://www.mdpi.com/search?q=personalized+treatment)
 
 ## Cite us
+
+Are you referring to our research project? Please cite us!
+
+> E. M. Abenavoli _et al._, **Characterization of Mediastinal Bulky Lymphomas with FDG-PET-Based Radiomics and Machine Learning Techniques**, [Cancers **15** (2023) 1931](https://doi.org/10.3390/cancers15071931)
+
 ```bibtex
 @article{cancers15071931,
-  author = {Abenavoli, Elisabetta Maria and Barbetti, Matteo and Linguanti, Flavia and Mungai, Francesco and Nassi, Luca and Puccini, Benedetta and Romano, Ilaria and Sordi, Benedetta and Santi, Raffaella and Passeri, Alessandro and Sciagrà, Roberto and Talamonti, Cinzia and Cistaro, Angelina and Vannucchi, Alessandro Maria and Berti, Valentina},
+  author = {Abenavoli, Elisabetta Maria and Barbetti, Matteo and Linguanti, Flavia and Mungai, Francesco and
+            Nassi, Luca and Puccini, Benedetta and Romano, Ilaria and Sordi, Benedetta and Santi, Raffaella and
+            Passeri, Alessandro and Sciagrà, Roberto and Talamonti, Cinzia and Cistaro, Angelina and
+            Vannucchi, Alessandro Maria and Berti, Valentina},
   title = {Characterization of Mediastinal Bulky Lymphomas with FDG-PET-Based Radiomics and Machine Learning Techniques},
   journal = {Cancers},
   volume = {15},
