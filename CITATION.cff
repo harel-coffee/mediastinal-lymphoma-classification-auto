@@ -1,0 +1,57 @@
+cff-version: 1.2.0
+message: "Are you referring to our research project? Please cite us!"
+authors:
+- family-names: "Barbetti"
+  given-names: "Matteo"
+  orcid: "https://orcid.org/0000-0002-6704-6914"
+title: "Machine-learning-based classification of bulky mediastinal lymphomas using radiomic features"
+url: "https://github.com/mbarbetti/mediastinal-lymphoma-classification"
+preferred-citation:
+  type: article
+  authors:
+  - family-names: "Abenavoli"
+    given-names: "Elisabetta Maria"
+    orcid: "https://orcid.org/0000-0002-9370-102X"
+  - family-names: "Barbetti"
+    given-names: "Matteo"
+    orcid: "https://orcid.org/0000-0002-6704-6914"
+  - family-names: "Linguanti"
+    given-names: "Flavia"
+    orcid: "https://orcid.org/0000-0001-9954-5032"
+  - family-names: "Mungai"
+    given-names: "Francesco"
+  - family-names: "Nassi"
+    given-names: "Luca"
+  - family-names: "Puccini"
+    given-names: "Benedetta"
+  - family-names: "Romano"
+    given-names: "Ilaria"
+    orcid: "https://orcid.org/0000-0001-5720-9807"
+  - family-names: "Sordi"
+    given-names: "Benedetta"
+  - family-names: "Santi"
+    given-names: "Raffaella"
+    orcid: "https://orcid.org/0009-0005-5317-7533"
+  - family-names: "Passeri"
+    given-names: "Alessandro"
+  - family-names: "Sciagrà"
+    given-names: "Roberto"
+  - family-names: "Talamonti"
+    given-names: "Cinzia"
+    orcid: "https://orcid.org/0000-0003-2955-6451"
+  - family-names: "Cistaro"
+    given-names: "Angelina"
+    orcid: "https://orcid.org/0000-0001-8024-8425"
+  - family-names: "Vannucchi"
+    given-names: "Alessandro Maria"
+  - family-names: "Berti"
+    given-names: "Valentina"
+    orcid: "https://orcid.org/0000-0001-9947-6559"
+  doi: "10.3390/cancers15071931"
+  journal: "Cancers"
+  title: "Characterization of Mediastinal Bulky Lymphomas with FDG-PET-Based Radiomics and Machine Learning Techniques"
+  volume: 15
+  issue: 7
+  start: 1931
+  month: 3
+  year: 2023
