@@ -16,11 +16,13 @@ Are you referring to our research project? Please cite us!
 
 ```bibtex
 @article{cancers15071931,
-  author = {Abenavoli, Elisabetta Maria and Barbetti, Matteo and Linguanti, Flavia and Mungai, Francesco and
-            Nassi, Luca and Puccini, Benedetta and Romano, Ilaria and Sordi, Benedetta and Santi, Raffaella and
-            Passeri, Alessandro and Sciagrà, Roberto and Talamonti, Cinzia and Cistaro, Angelina and
+  author = {Abenavoli, Elisabetta Maria and Barbetti, Matteo and Linguanti, Flavia and 
+            Mungai, Francesco and Nassi, Luca and Puccini, Benedetta and Romano, Ilaria and 
+            Sordi, Benedetta and Santi, Raffaella and Passeri, Alessandro and 
+            Sciagrà, Roberto and Talamonti, Cinzia and Cistaro, Angelina and 
             Vannucchi, Alessandro Maria and Berti, Valentina},
-  title = {Characterization of Mediastinal Bulky Lymphomas with FDG-PET-Based Radiomics and Machine Learning Techniques},
+  title = {Characterization of Mediastinal Bulky Lymphomas with FDG-PET-Based Radiomics 
+           and Machine Learning Techniques},
   journal = {Cancers},
   volume = {15},
   number = {7},
